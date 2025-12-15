@@ -1,3 +1,8 @@
+server:
+  port: 8080
+  error:
+    include-stacktrace: never
+
 spring:
   application:
     name: event-microservice
@@ -7,22 +12,31 @@ spring:
         default-page-size: 10
         max-page-size: 100
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:events-db}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
   jpa:
+    show-sql: false
+    open-in-view: false
     hibernate:
       ddl-auto: validate
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
   flyway:
-    url: ${DB_URL}
-    user: ${DB_USER}
-    password: ${DB_PASSWORD}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:events-db}
+    user: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
     locations: classpath:db/migration
     enabled: true
     baseline-on-migrate: true
 
-email-service:
-  url: ${EMAIL_SERVICE_URL}
+logging:
+  level:
+    root: INFO
+    com.Samuel.event_microservice: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%15.15t] %-5level %-40.40logger{39} : %m%n"

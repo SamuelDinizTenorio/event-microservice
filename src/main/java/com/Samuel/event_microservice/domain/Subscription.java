@@ -6,6 +6,12 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
+/**
+ * Representa a entidade Subscription (inscrição) no banco de dados.
+ * Registra a participação de um usuário em um evento.
+ */
 @Entity(name = "subscription")
 @Table(name = "subscription")
 @Getter
@@ -15,13 +21,23 @@ public class Subscription {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private final Long id;
+    private final Long id; // Identificador único da inscrição.
 
     @ManyToOne
-    private final Event event;
+    private final Event event; // O evento ao qual esta inscrição pertence.
 
-    private final String participantEmail;
+    private final String participantEmail; // O e-mail do participante inscrito.
 
+    private final LocalDateTime createdAt; // A data e hora em que a inscrição foi criada.
+
+    /**
+     * Construtor que cria uma nova instância de Subscription.
+     * Realiza validações básicas antes de criar o objeto.
+     *
+     * @param event O evento ao qual o participante está se inscrevendo.
+     * @param participantEmail O e-mail do participante.
+     * @throws IllegalArgumentException se o evento for nulo ou o e-mail do participante for nulo/vazio.
+     */
     public Subscription(Event event, String participantEmail) {
         if (event == null) {
             throw new IllegalArgumentException("O evento não pode ser nulo.");
@@ -33,5 +49,6 @@ public class Subscription {
         this.id = null; // O ID será gerado pelo JPA
         this.event = event;
         this.participantEmail = participantEmail;
+        this.createdAt = LocalDateTime.now(); // Define a data de criação
     }
 }

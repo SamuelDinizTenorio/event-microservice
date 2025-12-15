@@ -1,0 +1,8 @@
+ALTER TABLE event
+    ADD COLUMN image_url VARCHAR(255),
+    ADD COLUMN event_url VARCHAR(255),
+    ADD COLUMN is_remote BOOLEAN,
+    ADD COLUMN location VARCHAR(255);
+
+ALTER TABLE event
+    ALTER COLUMN date TYPE TIMESTAMP;
