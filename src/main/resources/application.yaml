@@ -6,6 +6,11 @@ server:
 spring:
   application:
     name: event-microservice
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
   data:
     web:
       pageable:
