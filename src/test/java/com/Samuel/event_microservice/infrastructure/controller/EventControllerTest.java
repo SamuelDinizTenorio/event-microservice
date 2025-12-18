@@ -1,13 +1,13 @@
 package com.Samuel.event_microservice.infrastructure.controller;
 
+import com.Samuel.event_microservice.infrastructure.dto.PageResponseDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventRequestDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventResponseDTO;
 import com.Samuel.event_microservice.infrastructure.dto.subscription.RegisteredParticipantDTO;
 import com.Samuel.event_microservice.infrastructure.dto.subscription.SubscriptionRequestDTO;
-import com.Samuel.event_microservice.infrastructure.dto.SuccessResponseDTO; // Importar o novo DTO
 import com.Samuel.event_microservice.core.exceptions.EventNotFoundException;
 import com.Samuel.event_microservice.core.exceptions.SubscriptionAlreadyExistsException;
-import com.Samuel.event_microservice.core.usecases.EventUseCase; // Importar a interface
+import com.Samuel.event_microservice.core.usecases.EventUseCase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,9 +15,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -46,7 +43,7 @@ class EventControllerTest {
     private ObjectMapper objectMapper;
 
     @MockBean
-    private EventUseCase eventUseCase; // Usar a interface
+    private EventUseCase eventUseCase;
 
     @Test
     @DisplayName("Should return status 200 and a page of all events when calling GET /events")
@@ -54,8 +51,7 @@ class EventControllerTest {
         // Arrange
         UUID eventId = UUID.randomUUID();
         EventResponseDTO eventDTO = new EventResponseDTO(eventId, "Evento de Teste", "Descrição", LocalDateTime.now(), 100, 10, "http://image.url", "http://event.url", null, true);
-        Pageable pageable = PageRequest.of(0, 10);
-        Page<EventResponseDTO> eventPage = new PageImpl<>(List.of(eventDTO), pageable, 1);
+        PageResponseDTO<EventResponseDTO> eventPage = new PageResponseDTO<>(List.of(eventDTO), 0, 10, 1, 1, true);
 
         when(eventUseCase.getAllEvents(any(Pageable.class))).thenReturn(eventPage);
 
@@ -67,7 +63,7 @@ class EventControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(eventId.toString()))
                 .andExpect(jsonPath("$.content[0].title").value("Evento de Teste"))
-                .andExpect(jsonPath("$.totalElements").value(1));
+                .andExpect(jsonPath("$.total_elements").value(1));
     }
 
     @Test
@@ -76,8 +72,7 @@ class EventControllerTest {
         // Arrange
         UUID eventId = UUID.randomUUID();
         EventResponseDTO upcomingEventDTO = new EventResponseDTO(eventId, "Evento Futuro", "Descrição", LocalDateTime.now().plusDays(5), 50, 5, "http://image.url", "http://event.url", null, true);
-        Pageable pageable = PageRequest.of(0, 5);
-        Page<EventResponseDTO> eventPage = new PageImpl<>(List.of(upcomingEventDTO), pageable, 1);
+        PageResponseDTO<EventResponseDTO> eventPage = new PageResponseDTO<>(List.of(upcomingEventDTO), 0, 5, 1, 1, true);
 
         when(eventUseCase.getUpcomingEvents(any(Pageable.class))).thenReturn(eventPage);
 
@@ -89,7 +84,7 @@ class EventControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(eventId.toString()))
                 .andExpect(jsonPath("$.content[0].title").value("Evento Futuro"))
-                .andExpect(jsonPath("$.totalElements").value(1));
+                .andExpect(jsonPath("$.total_elements").value(1));
     }
 
     @Test
@@ -163,7 +158,6 @@ class EventControllerTest {
         // Arrange
         UUID eventId = UUID.randomUUID();
         SubscriptionRequestDTO subscriptionDTO = new SubscriptionRequestDTO("test@example.com");
-        SuccessResponseDTO successResponse = new SuccessResponseDTO("Inscrição realizada com sucesso!");
         
         doNothing().when(eventUseCase).registerParticipant(eq(eventId), any(SubscriptionRequestDTO.class));
 
@@ -172,7 +166,7 @@ class EventControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(subscriptionDTO)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value(successResponse.message()));
+                .andExpect(jsonPath("$.message").value("Inscrição realizada com sucesso!"));
     }
 
     @Test
@@ -230,8 +224,7 @@ class EventControllerTest {
         // Arrange
         UUID eventId = UUID.randomUUID();
         RegisteredParticipantDTO participantDTO = new RegisteredParticipantDTO("participant@example.com");
-        Pageable pageable = PageRequest.of(0, 10);
-        Page<RegisteredParticipantDTO> participantsPage = new PageImpl<>(List.of(participantDTO), pageable, 1);
+        PageResponseDTO<RegisteredParticipantDTO> participantsPage = new PageResponseDTO<>(List.of(participantDTO), 0, 10, 1, 1, true);
 
         when(eventUseCase.getRegisteredParticipants(eq(eventId), any(Pageable.class))).thenReturn(participantsPage);
 
@@ -242,7 +235,7 @@ class EventControllerTest {
                         .param("size", "10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].participantEmail").value("participant@example.com"))
-                .andExpect(jsonPath("$.totalElements").value(1));
+                .andExpect(jsonPath("$.total_elements").value(1));
     }
 
     @Test

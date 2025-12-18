@@ -1,7 +1,16 @@
 server:
-  port: 8080
+  port: ${APP_PORT:8080}
   error:
     include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
 
 spring:
   application:
@@ -17,7 +26,9 @@ spring:
         default-page-size: 10
         max-page-size: 100
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:events-db}
+    # Valores padrão para desenvolvimento local (fora do Docker).
+    # Serão sobrescritos pelas variáveis de ambiente no Docker Compose.
+    url: jdbc:postgresql://localhost:${DB_PORT:5432}/events-db
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:postgres}
   jpa:
@@ -29,9 +40,7 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
   flyway:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:events-db}
-    user: ${DB_USER:postgres}
-    password: ${DB_PASSWORD:postgres}
+    # O Flyway usará automaticamente o datasource principal acima.
     locations: classpath:db/migration
     enabled: true
     baseline-on-migrate: true

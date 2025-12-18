@@ -1,5 +1,6 @@
 package com.Samuel.event_microservice.core.usecases;
 
+import com.Samuel.event_microservice.infrastructure.dto.PageResponseDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventRequestDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventResponseDTO;
 import com.Samuel.event_microservice.infrastructure.dto.subscription.RegisteredParticipantDTO;
@@ -7,7 +8,6 @@ import com.Samuel.event_microservice.infrastructure.dto.subscription.Subscriptio
 import com.Samuel.event_microservice.core.exceptions.EventFullException;
 import com.Samuel.event_microservice.core.exceptions.EventNotFoundException;
 import com.Samuel.event_microservice.core.exceptions.SubscriptionAlreadyExistsException;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.UUID;
@@ -30,17 +30,17 @@ public interface EventUseCase {
      * Retorna uma página de todos os eventos, incluindo futuros e passados.
      *
      * @param pageable Objeto de paginação para controlar o tamanho e a ordenação da página.
-     * @return Uma página de {@link EventResponseDTO}.
+     * @return Um DTO de resposta paginada contendo {@link EventResponseDTO}.
      */
-    Page<EventResponseDTO> getAllEvents(Pageable pageable);
+    PageResponseDTO<EventResponseDTO> getAllEvents(Pageable pageable);
 
     /**
      * Retorna uma página de eventos que ainda não ocorreram.
      *
      * @param pageable Objeto de paginação para controlar o tamanho e a ordenação da página.
-     * @return Uma página de {@link EventResponseDTO} representando os eventos futuros.
+     * @return Um DTO de resposta paginada contendo {@link EventResponseDTO} dos eventos futuros.
      */
-    Page<EventResponseDTO> getUpcomingEvents(Pageable pageable);
+    PageResponseDTO<EventResponseDTO> getUpcomingEvents(Pageable pageable);
 
     /**
      * Busca os detalhes de um evento específico pelo seu ID.
@@ -67,8 +67,8 @@ public interface EventUseCase {
      *
      * @param eventId O UUID do evento.
      * @param pageable Objeto de paginação para controlar o tamanho e a ordenação da página.
-     * @return Uma página de {@link RegisteredParticipantDTO} com os e-mails dos participantes.
+     * @return Um DTO de resposta paginada contendo {@link RegisteredParticipantDTO} com os e-mails dos participantes.
      * @throws EventNotFoundException se o evento com o ID fornecido não for encontrado.
      */
-    Page<RegisteredParticipantDTO> getRegisteredParticipants(UUID eventId, Pageable pageable);
+    PageResponseDTO<RegisteredParticipantDTO> getRegisteredParticipants(UUID eventId, Pageable pageable);
 }

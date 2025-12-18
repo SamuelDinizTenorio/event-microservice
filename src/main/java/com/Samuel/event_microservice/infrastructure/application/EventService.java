@@ -9,7 +9,8 @@ import com.Samuel.event_microservice.core.ports.EmailSender;
 import com.Samuel.event_microservice.core.ports.EventRepositoryPort;
 import com.Samuel.event_microservice.core.ports.SubscriptionRepositoryPort;
 import com.Samuel.event_microservice.core.usecases.EventUseCase;
-import com.Samuel.event_microservice.infrastructure.dto.*;
+import com.Samuel.event_microservice.infrastructure.dto.EmailRequestDTO;
+import com.Samuel.event_microservice.infrastructure.dto.PageResponseDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventRequestDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventResponseDTO;
 import com.Samuel.event_microservice.infrastructure.dto.subscription.RegisteredParticipantDTO;
@@ -68,11 +69,12 @@ public class EventService implements EventUseCase {
      */
     @Override
     @Transactional(readOnly = true)
-    public Page<EventResponseDTO> getAllEvents(Pageable pageable) {
+    public PageResponseDTO<EventResponseDTO> getAllEvents(Pageable pageable) {
         logger.info("Fetching all events. Page: {}, Size: {}", pageable.getPageNumber(), pageable.getPageSize());
         Page<Event> eventPage = eventRepository.findAll(pageable);
         logger.info("Found {} total events.", eventPage.getTotalElements());
-        return eventPage.map(EventResponseDTO::new);
+        Page<EventResponseDTO> eventResponseDTOPage = eventPage.map(EventResponseDTO::new);
+        return new PageResponseDTO<>(eventResponseDTOPage);
     }
 
     /**
@@ -80,11 +82,12 @@ public class EventService implements EventUseCase {
      */
     @Override
     @Transactional(readOnly = true)
-    public Page<EventResponseDTO> getUpcomingEvents(Pageable pageable) {
+    public PageResponseDTO<EventResponseDTO> getUpcomingEvents(Pageable pageable) {
         logger.info("Fetching upcoming events. Page: {}, Size: {}", pageable.getPageNumber(), pageable.getPageSize());
         Page<Event> eventPage = eventRepository.findUpcomingEvents(LocalDateTime.now(), pageable);
         logger.info("Found {} upcoming events.", eventPage.getTotalElements());
-        return eventPage.map(EventResponseDTO::new);
+        Page<EventResponseDTO> eventResponseDTOPage = eventPage.map(EventResponseDTO::new);
+        return new PageResponseDTO<>(eventResponseDTOPage);
     }
 
     /**
@@ -162,7 +165,7 @@ public class EventService implements EventUseCase {
      */
     @Override
     @Transactional(readOnly = true)
-    public Page<RegisteredParticipantDTO> getRegisteredParticipants(UUID eventId, Pageable pageable) {
+    public PageResponseDTO<RegisteredParticipantDTO> getRegisteredParticipants(UUID eventId, Pageable pageable) {
         logger.info("Fetching participants for event with ID: {}", eventId);
         if (!eventRepository.existsById(eventId)) {
             logger.warn("Event with ID {} not found when fetching participants.", eventId);
@@ -171,6 +174,7 @@ public class EventService implements EventUseCase {
 
         Page<Subscription> subscriptions = subscriptionRepository.findByEvent(eventRepository.getReferenceById(eventId), pageable);
         logger.info("Found {} participants for event {}.", subscriptions.getTotalElements(), eventId);
-        return subscriptions.map(subscription -> new RegisteredParticipantDTO(subscription.getParticipantEmail()));
+        Page<RegisteredParticipantDTO> registeredParticipantDTOPage = subscriptions.map(subscription -> new RegisteredParticipantDTO(subscription.getParticipantEmail()));
+        return new PageResponseDTO<>(registeredParticipantDTOPage);
     }
 }

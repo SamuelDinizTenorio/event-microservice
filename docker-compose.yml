@@ -1,0 +1,80 @@
+# Define as redes que os serviços usarão para se comunicar entre si.
+# Isso isola os serviços em uma rede virtual, permitindo que se refiram uns aos outros pelo nome do serviço.
+networks:
+  event-network:
+    driver: bridge # O driver 'bridge' cria uma rede interna padrão.
+
+# Define os volumes nomeados para persistência de dados.
+# Volumes garantem que os dados não sejam perdidos quando os containers são removidos ou recriados.
+volumes:
+  postgres_data:
+    driver: local # O driver 'local' armazena os dados no sistema de arquivos do host.
+
+# Seção principal que define todos os serviços (containers) da sua aplicação.
+services:
+  # --- Serviço do Banco de Dados ---
+  db:
+    image: postgres:16-alpine
+    container_name: event-db
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: events-db
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Conecta este serviço à rede definida.
+    networks:
+      - event-network
+    # Configuração de healthcheck para verificar se o banco de dados está pronto.
+    # O Docker Compose esperará que este check passe antes de iniciar serviços dependentes.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d events-db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # --- Serviço da Aplicação (Event Microservice) ---
+  event-microservice:
+    build: .
+    container_name: event-microservice
+    env_file:
+      - .env
+    environment:
+      # Variáveis de ambiente no formato padrão do Spring Boot.
+      # Elas sobrescrevem automaticamente as propriedades do application.yaml.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/events-db
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-postgres}
+      SERVER_PORT: ${APP_PORT:-8080}
+      EMAIL_SERVICE_URL: ${EMAIL_SERVICE_URL:-http://host.docker.internal:8081}
+    ports:
+      - "${APP_PORT:-8080}:${APP_PORT:-8080}"
+    networks:
+      - event-network
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT:-8080}/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M

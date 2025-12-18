@@ -1,5 +1,6 @@
 package com.Samuel.event_microservice.infrastructure.controller;
 
+import com.Samuel.event_microservice.infrastructure.dto.PageResponseDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventRequestDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventResponseDTO;
 import com.Samuel.event_microservice.infrastructure.dto.subscription.RegisteredParticipantDTO;
@@ -8,7 +9,6 @@ import com.Samuel.event_microservice.infrastructure.dto.SuccessResponseDTO;
 import com.Samuel.event_microservice.core.usecases.EventUseCase;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -36,12 +36,12 @@ public class EventController {
      * Retorna uma página de todos os eventos (futuros e passados), ordenados por data.
      *
      * @param pageable Objeto injetado pelo Spring para controle de paginação e ordenação.
-     * @return Um {@link ResponseEntity} com status 200 OK e uma página de {@link EventResponseDTO}.
+     * @return Um {@link ResponseEntity} com status 200 OK e um DTO de resposta paginada.
      */
     @GetMapping
-    public ResponseEntity<Page<EventResponseDTO>> getAllEvents(
+    public ResponseEntity<PageResponseDTO<EventResponseDTO>> getAllEvents(
             @PageableDefault(sort = "date", direction = Sort.Direction.ASC) Pageable pageable) {
-        Page<EventResponseDTO> events = eventUseCase.getAllEvents(pageable);
+        PageResponseDTO<EventResponseDTO> events = eventUseCase.getAllEvents(pageable);
         return ResponseEntity.ok(events);
     }
 
@@ -49,12 +49,12 @@ public class EventController {
      * Retorna uma página de eventos futuros, ordenados por data.
      *
      * @param pageable Objeto injetado pelo Spring para controle de paginação e ordenação.
-     * @return Um {@link ResponseEntity} com status 200 OK e uma página de {@link EventResponseDTO}.
+     * @return Um {@link ResponseEntity} com status 200 OK e um DTO de resposta paginada.
      */
     @GetMapping("/upcoming")
-    public ResponseEntity<Page<EventResponseDTO>> getUpcomingEvents(
+    public ResponseEntity<PageResponseDTO<EventResponseDTO>> getUpcomingEvents(
             @PageableDefault(sort = "date", direction = Sort.Direction.ASC) Pageable pageable) {
-        Page<EventResponseDTO> events = eventUseCase.getUpcomingEvents(pageable);
+        PageResponseDTO<EventResponseDTO> events = eventUseCase.getUpcomingEvents(pageable);
         return ResponseEntity.ok(events);
     }
 
@@ -109,13 +109,13 @@ public class EventController {
      *
      * @param eventId O UUID do evento, fornecido como uma variável de caminho.
      * @param pageable Objeto injetado pelo Spring para controle de paginação e ordenação.
-     * @return Um {@link ResponseEntity} com status 200 OK e uma página de {@link RegisteredParticipantDTO}.
+     * @return Um {@link ResponseEntity} com status 200 OK e um DTO de resposta paginada.
      */
     @GetMapping("/{eventId}/participants")
-    public ResponseEntity<Page<RegisteredParticipantDTO>> getRegisteredParticipants(
+    public ResponseEntity<PageResponseDTO<RegisteredParticipantDTO>> getRegisteredParticipants(
             @PathVariable UUID eventId,
             @PageableDefault(sort = "createdAt", direction = Sort.Direction.ASC) Pageable pageable) {
-        Page<RegisteredParticipantDTO> participants = eventUseCase.getRegisteredParticipants(eventId, pageable);
+        PageResponseDTO<RegisteredParticipantDTO> participants = eventUseCase.getRegisteredParticipants(eventId, pageable);
         return ResponseEntity.ok(participants);
     }
 }

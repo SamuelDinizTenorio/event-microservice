@@ -2,6 +2,7 @@ package com.Samuel.event_microservice.infrastructure.application;
 
 import com.Samuel.event_microservice.core.models.Event;
 import com.Samuel.event_microservice.core.models.Subscription;
+import com.Samuel.event_microservice.infrastructure.dto.PageResponseDTO; // Novo import
 import com.Samuel.event_microservice.infrastructure.dto.event.EventRequestDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventResponseDTO;
 import com.Samuel.event_microservice.infrastructure.dto.subscription.RegisteredParticipantDTO;
@@ -77,8 +78,8 @@ class EventServiceTest {
     }
 
     @Test
-    @DisplayName("Should return a page of all events")
-    void getAllEvents_shouldReturnPageOfEvents() {
+    @DisplayName("Should return a PageResponseDTO of all events")
+    void getAllEvents_shouldReturnPageResponseDTOOfEvents() {
         // Arrange
         Pageable pageable = PageRequest.of(0, 10);
         Event event = createEventEntity("Evento Qualquer", LocalDateTime.now(), 100);
@@ -87,16 +88,18 @@ class EventServiceTest {
         when(eventRepository.findAll(pageable)).thenReturn(eventPage);
 
         // Act
-        Page<EventResponseDTO> resultPage = eventService.getAllEvents(pageable);
+        PageResponseDTO<EventResponseDTO> resultPage = eventService.getAllEvents(pageable);
 
         // Assert
         assertNotNull(resultPage);
-        assertEquals(1, resultPage.getTotalElements());
+        assertEquals(1, resultPage.totalElements());
+        assertEquals(1, resultPage.content().size());
+        assertEquals("Evento Qualquer", resultPage.content().get(0).title());
         verify(eventRepository, times(1)).findAll(pageable);
     }
 
     @Test
-    @DisplayName("Should return a page of upcoming events by calling the correct repository method")
+    @DisplayName("Should return a PageResponseDTO of upcoming events by calling the correct repository method")
     void getUpcomingEvents_shouldCallRepositoryAndMapResult() {
         // Arrange
         Pageable pageable = PageRequest.of(0, 10);
@@ -106,12 +109,13 @@ class EventServiceTest {
         when(eventRepository.findUpcomingEvents(any(LocalDateTime.class), eq(pageable))).thenReturn(upcomingEventsPage);
 
         // Act
-        Page<EventResponseDTO> resultPage = eventService.getUpcomingEvents(pageable);
+        PageResponseDTO<EventResponseDTO> resultPage = eventService.getUpcomingEvents(pageable);
 
         // Assert
         assertNotNull(resultPage);
-        assertEquals(1, resultPage.getContent().size());
-        assertEquals("Evento Futuro", resultPage.getContent().get(0).title());
+        assertEquals(1, resultPage.totalElements());
+        assertEquals(1, resultPage.content().size());
+        assertEquals("Evento Futuro", resultPage.content().get(0).title());
         
         verify(eventRepository, times(1)).findUpcomingEvents(any(LocalDateTime.class), eq(pageable));
         verify(eventRepository, never()).findAll(any(Pageable.class));
@@ -238,8 +242,8 @@ class EventServiceTest {
     }
 
     @Test
-    @DisplayName("Should return a page of registered participants for a valid event")
-    void getRegisteredParticipants_withValidEventId_shouldReturnParticipantsPage() {
+    @DisplayName("Should return a PageResponseDTO of registered participants for a valid event")
+    void getRegisteredParticipants_withValidEventId_shouldReturnParticipantsPageResponseDTO() {
         // Arrange
         UUID eventId = UUID.randomUUID();
         Event event = createEventEntity("Evento com Participantes", LocalDateTime.now().plusDays(1), 100);
@@ -252,12 +256,13 @@ class EventServiceTest {
         when(subscriptionRepository.findByEvent(event, pageable)).thenReturn(subscriptionPage);
 
         // Act
-        Page<RegisteredParticipantDTO> resultPage = eventService.getRegisteredParticipants(eventId, pageable);
+        PageResponseDTO<RegisteredParticipantDTO> resultPage = eventService.getRegisteredParticipants(eventId, pageable);
 
         // Assert
         assertNotNull(resultPage);
-        assertEquals(1, resultPage.getTotalElements());
-        assertEquals("test@example.com", resultPage.getContent().get(0).participantEmail());
+        assertEquals(1, resultPage.totalElements());
+        assertEquals(1, resultPage.content().size());
+        assertEquals("test@example.com", resultPage.content().get(0).participantEmail());
         verify(subscriptionRepository, times(1)).findByEvent(event, pageable);
     }
 
