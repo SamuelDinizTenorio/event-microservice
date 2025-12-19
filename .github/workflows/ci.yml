@@ -20,6 +20,28 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    # Adiciona um serviço de container para o banco de dados PostgreSQL.
+    # O GitHub Actions iniciará este container antes de começar os steps
+    # e o disponibilizará para a aplicação de teste na rede do runner.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        # Variáveis de ambiente para o container do Postgres.
+        env:
+          POSTGRES_USER: ${{ secrets.DB_USERNAME_TEST }}
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD_TEST }}
+          POSTGRES_DB: testdb
+        # Opções para garantir que o container esteja pronto antes de prosseguir.
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # Mapeia a porta do container para uma porta no host do runner.
+          # Isso permite que a aplicação se conecte via localhost:<port>.
+          - 5432:5432
+
     steps:
       # 1. Baixa o código do repositório para a máquina virtual.
       - name: Checkout code

@@ -82,7 +82,7 @@ class EventServiceTest {
     void getAllEvents_shouldReturnPageResponseDTOOfEvents() {
         // Arrange
         Pageable pageable = PageRequest.of(0, 10);
-        Event event = createEventEntity("Evento Qualquer", LocalDateTime.now(), 100);
+        Event event = createEventEntity("Evento Qualquer", LocalDateTime.now().plusDays(1), 100);
         Page<Event> eventPage = new PageImpl<>(List.of(event), pageable, 1);
 
         when(eventRepository.findAll(pageable)).thenReturn(eventPage);
