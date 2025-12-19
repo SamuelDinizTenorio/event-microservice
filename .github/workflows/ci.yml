@@ -30,7 +30,7 @@ jobs:
         env:
           POSTGRES_USER: ${{ secrets.DB_USERNAME_TEST }}
           POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD_TEST }}
-          POSTGRES_DB: testdb
+          POSTGRES_DB: events-db
         # Opções para garantir que o container esteja pronto antes de prosseguir.
         options: >-
           --health-cmd "pg_isready -U postgres"
