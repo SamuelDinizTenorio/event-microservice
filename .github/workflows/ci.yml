@@ -1,0 +1,80 @@
+# Nome do workflow que aparecerá na aba "Actions" do GitHub.
+name: CI - Build, Test and Security Analysis
+
+# Define os gatilhos (triggers) que iniciam o workflow.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Concede as permissões necessárias para o job.
+# O CodeQL precisa de permissão para escrever os resultados na aba "Security".
+permissions:
+  contents: read # Necessário para a action de checkout.
+  security-events: write # Necessário para a action do CodeQL.
+  checks: write # Opcional, mas bom para relatar status.
+  actions: read # Opcional, para ler informações sobre outras actions.
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    # Adiciona um serviço de container para o banco de dados PostgreSQL.
+    # O GitHub Actions iniciará este container antes de começar os steps.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        # Variáveis de ambiente para o container do Postgres.
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: testdb
+        # Opções para garantir que o container esteja pronto.
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # Mapeia a porta do container para uma porta no host do runner.
+          # O GitHub Actions garante que a porta 5432 estará disponível.
+          - 5432:5432
+
+    steps:
+      # 1. Baixa o código do repositório para a máquina virtual.
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Configura o ambiente Java com a versão correta (JDK 21).
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      # 3. Inicializa o CodeQL para análise de segurança.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: java
+
+      # 4. Executa os testes usando o Maven.
+      # As variáveis de ambiente são injetadas a partir dos GitHub Secrets.
+      - name: Run tests with Maven
+        env:
+          APP_PORT: ${{ secrets.APP_PORT_TEST }}
+          DB_PORT: ${{ secrets.DB_PORT_TEST }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME_TEST }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD_TEST }}
+          EMAIL_SERVICE_URL: ${{ secrets.EMAIL_SERVICE_URL_TEST }}
+        run: mvn -B test
+
+      # 5. Constrói o projeto (cria o .jar) se os testes passarem.
+      - name: Build project with Maven
+        run: mvn -B package -DskipTests
+
+      # 6. Finaliza a análise do CodeQL.
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4

@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
  * Esta interface é usada para fazer chamadas HTTP declarativas para o serviço de notificação,
  * permitindo o envio de e-mails de forma desacoplada.
  */
-@FeignClient(name = "email-service", url = "${EMAIL_SERVICE_URL}")
+@FeignClient(name = "email-service", url = "${clients.email-service.url}")
 public interface EmailServiceClient {
 
     /**

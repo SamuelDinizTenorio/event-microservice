@@ -12,6 +12,11 @@ management:
     health:
       show-details: always
 
+# Configuração de clientes para serviços externos
+clients:
+  email-service:
+    url: ${EMAIL_SERVICE_URL:http://localhost:8081}
+
 spring:
   application:
     name: event-microservice
