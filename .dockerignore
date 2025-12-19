@@ -9,6 +9,7 @@ release.properties
 # Arquivos e diretórios do Git
 .git/
 .gitignore
+.github/
 
 # Arquivos de configuração da IDE
 .idea/

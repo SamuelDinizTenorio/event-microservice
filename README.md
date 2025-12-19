@@ -27,10 +27,11 @@ O projeto foi construído seguindo princípios de **Arquitetura Limpa (Hexagonal
 - **Spring Data JPA (Hibernate)**: Para persistência de dados.
 - **PostgreSQL**: Banco de dados relacional.
 - **Flyway**: Para gerenciamento de migrações do banco de dados.
-- **Spring Cloud OpenFeign**: Para comunicação com outros microsserviços (ex: serviço de e-mail).
+- **Spring Cloud OpenFeign**: Para comunicação com outros microsserviços.
 - **Spring Boot Actuator**: Para health checks.
 - **Maven**: Para gerenciamento de dependências e build.
-- **Docker & Docker Compose**: Para containerização e orquestração do ambiente de desenvolvimento.
+- **Docker & Docker Compose**: Para containerização do ambiente de desenvolvimento.
+- **Testcontainers**: Para testes de integração com um banco de dados real.
 - **Lombok**: Para reduzir código boilerplate.
 
 ---
@@ -41,7 +42,7 @@ O projeto foi construído seguindo princípios de **Arquitetura Limpa (Hexagonal
 
 - **Java 21** ou superior.
 - **Maven 3.8** ou superior.
-- **Docker** e **Docker Compose**.
+- **Docker** e **Docker Compose** (essencial para o ambiente de desenvolvimento e para rodar os testes).
 
 ### 1. Configuração do Ambiente
 
@@ -68,7 +69,7 @@ Antes de iniciar, você precisa configurar suas variáveis de ambiente.
 
 Este projeto depende de um microsserviço externo para o envio de e-mails, cuja URL é definida pela variável `EMAIL_SERVICE_URL`.
 
-- **O repositório para este serviço pode ser encontrado aqui:** [seu-servico-de-email](https://github.com/seu-usuario/seu-servico-de-email) (substitua pela URL real).
+- **O repositório para este serviço pode ser encontrado aqui:** [EMAIL-SERVICE](https://github.com/SamuelDinizTenorio/EMAIL-SERVICE).
 - Para uma experiência de desenvolvimento completa, você precisará clonar e executar esse serviço também (geralmente na porta 8081).
 - Se o serviço de e-mail não estiver disponível, a aplicação registrará um erro no log, mas **não falhará**. A operação principal (como o registro em um evento) será concluída com sucesso.
 
@@ -77,7 +78,6 @@ Este projeto depende de um microsserviço externo para o envio de e-mails, cuja 
 Esta é a maneira mais simples de rodar o ambiente completo.
 
 1.  **Construa e inicie os containers em segundo plano:**
-    No terminal, na raiz do projeto, execute:
     ```sh
     docker-compose up --build -d
     ```
@@ -85,22 +85,10 @@ Esta é a maneira mais simples de rodar o ambiente completo.
     - A aplicação estará disponível em `http://localhost:8080` (ou na porta que você definiu em `APP_PORT`).
 
 2.  **Gerenciando os Serviços:**
-    - **Ver logs:** Para acompanhar os logs de todos os serviços em tempo real, use:
-      ```sh
-      docker-compose logs -f
-      ```
-    - **Pausar os serviços:** Se quiser parar os containers sem removê-los (preservando o estado), use:
-      ```sh
-      docker-compose stop
-      ```
-    - **Retomar os serviços:** Para reiniciar os containers que foram parados, use:
-      ```sh
-      docker-compose start
-      ```
-    - **Parar e remover tudo:** Para parar e remover os containers, a rede e os volumes anônimos, use:
-      ```sh
-      docker-compose down
-      ```
+    - **Ver logs:** `docker-compose logs -f`
+    - **Pausar:** `docker-compose stop`
+    - **Retomar:** `docker-compose start`
+    - **Parar e remover tudo:** `docker-compose down`
 
 ### 3. Executando Localmente (IDE + Banco no Docker)
 
@@ -119,21 +107,28 @@ Esta abordagem é ideal para desenvolvimento e depuração.
     
 ---
 
+## 🧪 Testes
+
+O projeto utiliza **Testcontainers** para executar os testes de integração da camada de persistência (`@DataJpaTest`) contra um banco de dados PostgreSQL real, garantindo que os testes sejam fiéis ao ambiente de produção.
+
+- **Pré-requisito:** Para executar os testes, é necessário ter o **Docker em execução** na sua máquina.
+
+- **Executando os testes:**
+  Você pode rodar todos os testes através do Maven com o comando:
+  ```sh
+  mvn test
+  ```
+  Ou executar as classes de teste diretamente pela sua IDE.
+
+---
+
 ## 🔄 Trocando o Banco de Dados (Exemplo: para MySQL)
 
-A arquitetura do projeto permite a troca do banco de dados. Aqui está um guia de como trocar de PostgreSQL para MySQL.
-
-1.  **Atualize as Dependências no `pom.xml`:**
-    - Remova a dependência do driver do PostgreSQL e adicione a do MySQL.
-
-2.  **Ajuste o Dialeto do Hibernate no `application.yaml`:**
-    - Altere `spring.jpa.properties.hibernate.dialect` para `org.hibernate.dialect.MySQLDialect`.
-
-3.  **Modifique o Serviço `db` no `docker-compose.yml`:**
-    - Altere a `image` para `mysql:8.0`, ajuste as `environment` e mude a `ports` para `3306`.
-
-4.  **Verifique os Scripts do Flyway:**
-    - **Aviso Importante:** Os scripts SQL em `src/main/resources/db/migration` podem não ser compatíveis com MySQL. Você provavelmente precisará criar novas versões dos scripts.
+A arquitetura do projeto permite a troca do banco de dados. Para isso, você precisará:
+1.  Atualizar a dependência do driver no `pom.xml`.
+2.  Ajustar o dialeto do Hibernate no `application.yaml`.
+3.  Modificar o serviço `db` no `docker-compose.yml`.
+4.  **Verificar os Scripts do Flyway**, pois a sintaxe SQL pode precisar de ajustes.
 
 ---
 

@@ -20,27 +20,6 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
-    # Adiciona um serviço de container para o banco de dados PostgreSQL.
-    # O GitHub Actions iniciará este container antes de começar os steps.
-    services:
-      postgres:
-        image: postgres:16-alpine
-        # Variáveis de ambiente para o container do Postgres.
-        env:
-          POSTGRES_USER: testuser
-          POSTGRES_PASSWORD: testpassword
-          POSTGRES_DB: testdb
-        # Opções para garantir que o container esteja pronto.
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          # Mapeia a porta do container para uma porta no host do runner.
-          # O GitHub Actions garante que a porta 5432 estará disponível.
-          - 5432:5432
-
     steps:
       # 1. Baixa o código do repositório para a máquina virtual.
       - name: Checkout code
@@ -71,7 +50,7 @@ jobs:
           EMAIL_SERVICE_URL: ${{ secrets.EMAIL_SERVICE_URL_TEST }}
         run: mvn -B test
 
-      # 5. Constrói o projeto (cria o .jar) se os testes passarem.
+      # 5. Constrói o projeto usando o Maven.
       - name: Build project with Maven
         run: mvn -B package -DskipTests
 
