@@ -48,9 +48,11 @@ class JpaEventRepositoryTest {
     @DisplayName("Should return only upcoming events when findUpcomingEvents is called")
     void findUpcomingEvents_shouldReturnOnlyFutureEvents() {
         // Arrange
+        LocalDateTime now = LocalDateTime.now();
         Event pastEvent = Event.builder()
                 .title("Evento Passado")
-                .date(LocalDateTime.now().minusDays(1))
+                .startDateTime(now.minusDays(2))
+                .endDateTime(now.minusDays(1))
                 .maxParticipants(100)
                 .registeredParticipants(0)
                 .isRemote(false)
@@ -59,7 +61,8 @@ class JpaEventRepositoryTest {
 
         Event upcomingEvent = Event.builder()
                 .title("Evento Futuro")
-                .date(LocalDateTime.now().plusDays(1))
+                .startDateTime(now.plusDays(1))
+                .endDateTime(now.plusDays(2))
                 .maxParticipants(100)
                 .registeredParticipants(0)
                 .isRemote(true)
@@ -69,11 +72,12 @@ class JpaEventRepositoryTest {
         entityManager.flush();
 
         // Act
-        Page<Event> resultPage = jpaEventRepository.findUpcomingEvents(LocalDateTime.now(), PageRequest.of(0, 10));
+        Page<Event> resultPage = jpaEventRepository.findUpcomingEvents(now, PageRequest.of(0, 10));
 
         // Assert
         assertEquals(1, resultPage.getTotalElements());
-        assertEquals("Evento Futuro", resultPage.getContent().get(0).getTitle());
-        assertTrue(resultPage.getContent().get(0).getDate().isAfter(LocalDateTime.now()));
+        assertEquals("Evento Futuro", resultPage.getContent().getFirst().getTitle());
+        assertTrue(resultPage.getContent().getFirst().getStartDateTime().isAfter(now));
+        assertTrue(resultPage.getContent().getFirst().getEndDateTime().isAfter(now));
     }
 }

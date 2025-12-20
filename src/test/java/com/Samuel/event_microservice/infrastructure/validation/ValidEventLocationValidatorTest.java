@@ -28,11 +28,14 @@ class ValidEventLocationValidatorTest {
 
     // Método auxiliar para criar EventRequestDTOs com valores padrão
     private EventRequestDTO createEventRequestDTO(String eventUrl, String location, Boolean isRemote) {
+        LocalDateTime start = LocalDateTime.now().plusDays(1);
+        LocalDateTime end = start.plusHours(2);
         return new EventRequestDTO(
                 "Título do Evento",
                 "Descrição do Evento",
-                LocalDateTime.now().plusDays(1), // Data no futuro
-                100, // Máximo de participantes
+                start, // Data de início
+                end,   // Data de fim
+                100,   // Máximo de participantes
                 "http://imagem.url/default.jpg", // URL de imagem padrão
                 eventUrl,
                 location,

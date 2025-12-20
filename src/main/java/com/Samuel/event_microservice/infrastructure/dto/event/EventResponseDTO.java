@@ -12,7 +12,8 @@ import java.util.UUID;
  * @param id                   O identificador único do evento.
  * @param title                O título do evento.
  * @param description          A descrição detalhada do evento.
- * @param date                 A data e hora em que o evento ocorrerá.
+ * @param startDateTime        A data e hora de início do evento.
+ * @param endDateTime          A data e hora de encerramento do evento.
  * @param maxParticipants      O número máximo de participantes permitidos.
  * @param registeredParticipants O número de participantes atualmente registrados.
  * @param imageUrl             A URL de uma imagem de banner para o evento.
@@ -24,7 +25,8 @@ public record EventResponseDTO(
         UUID id,
         String title,
         String description,
-        LocalDateTime date,
+        LocalDateTime startDateTime,
+        LocalDateTime endDateTime,
         int maxParticipants,
         int registeredParticipants,
         String imageUrl,
@@ -42,7 +44,8 @@ public record EventResponseDTO(
                 event.getId(),
                 event.getTitle(),
                 event.getDescription(),
-                event.getDate(),
+                event.getStartDateTime(),
+                event.getEndDateTime(),
                 event.getMaxParticipants(),
                 event.getRegisteredParticipants(),
                 event.getImageUrl(),

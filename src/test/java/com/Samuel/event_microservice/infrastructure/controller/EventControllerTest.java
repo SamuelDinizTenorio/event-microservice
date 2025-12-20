@@ -9,11 +9,12 @@ import com.Samuel.event_microservice.core.exceptions.EventNotFoundException;
 import com.Samuel.event_microservice.core.exceptions.SubscriptionAlreadyExistsException;
 import com.Samuel.event_microservice.core.usecases.EventUseCase;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
@@ -32,8 +33,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@WebMvcTest(EventController.class)
 class EventControllerTest {
 
     @Autowired
@@ -45,12 +45,19 @@ class EventControllerTest {
     @MockBean
     private EventUseCase eventUseCase;
 
+    @BeforeEach
+    void setUp() {
+        // Garante que o ObjectMapper usado nos testes entenda os tipos do Java 8 (LocalDateTime)
+        objectMapper.registerModule(new JavaTimeModule());
+    }
+
     @Test
     @DisplayName("Should return status 200 and a page of all events when calling GET /events")
     void getAllEvents_shouldReturnPageOfEvents() throws Exception {
         // Arrange
         UUID eventId = UUID.randomUUID();
-        EventResponseDTO eventDTO = new EventResponseDTO(eventId, "Evento de Teste", "Descrição", LocalDateTime.now(), 100, 10, "http://image.url", "http://event.url", null, true);
+        LocalDateTime start = LocalDateTime.now().plusDays(1);
+        EventResponseDTO eventDTO = new EventResponseDTO(eventId, "Evento de Teste", "Descrição", start, start.plusHours(2), 100, 10, "http://image.url", "http://event.url", null, true);
         PageResponseDTO<EventResponseDTO> eventPage = new PageResponseDTO<>(List.of(eventDTO), 0, 10, 1, 1, true);
 
         when(eventUseCase.getAllEvents(any(Pageable.class))).thenReturn(eventPage);
@@ -71,7 +78,8 @@ class EventControllerTest {
     void getUpcomingEvents_shouldReturnPageOfUpcomingEvents() throws Exception {
         // Arrange
         UUID eventId = UUID.randomUUID();
-        EventResponseDTO upcomingEventDTO = new EventResponseDTO(eventId, "Evento Futuro", "Descrição", LocalDateTime.now().plusDays(5), 50, 5, "http://image.url", "http://event.url", null, true);
+        LocalDateTime start = LocalDateTime.now().plusDays(5);
+        EventResponseDTO upcomingEventDTO = new EventResponseDTO(eventId, "Evento Futuro", "Descrição", start, start.plusHours(1), 50, 5, "http://image.url", "http://event.url", null, true);
         PageResponseDTO<EventResponseDTO> eventPage = new PageResponseDTO<>(List.of(upcomingEventDTO), 0, 5, 1, 1, true);
 
         when(eventUseCase.getUpcomingEvents(any(Pageable.class))).thenReturn(eventPage);
@@ -92,7 +100,8 @@ class EventControllerTest {
     void getEventDetails_withValidId_shouldReturnEventDetails() throws Exception {
         // Arrange
         UUID eventId = UUID.randomUUID();
-        EventResponseDTO eventDTO = new EventResponseDTO(eventId, "Evento Detalhado", "Descrição", LocalDateTime.now(), 100, 25, "http://image.url", null, "Local", false);
+        LocalDateTime start = LocalDateTime.now().plusDays(2);
+        EventResponseDTO eventDTO = new EventResponseDTO(eventId, "Evento Detalhado", "Descrição", start, start.plusHours(2), 100, 25, "http://image.url", null, "Local", false);
 
         when(eventUseCase.getEventDetails(eventId)).thenReturn(eventDTO);
 
@@ -110,7 +119,7 @@ class EventControllerTest {
     void getEventDetails_withInvalidId_shouldReturnNotFound() throws Exception {
         // Arrange
         UUID invalidEventId = UUID.randomUUID();
-        
+
         when(eventUseCase.getEventDetails(invalidEventId)).thenThrow(new EventNotFoundException("Evento não encontrado."));
 
         // Act & Assert
@@ -124,8 +133,10 @@ class EventControllerTest {
     @DisplayName("Should return status 201 and created event when calling POST /events with valid data")
     void createEvent_withValidData_shouldReturnCreated() throws Exception {
         // Arrange
-        EventRequestDTO requestDTO = new EventRequestDTO("Novo Evento", "Descrição", LocalDateTime.now().plusDays(1), 100, "http://image.url", null, "Local", false);
-        EventResponseDTO createdEventResponse = new EventResponseDTO(UUID.randomUUID(), "Novo Evento", "Descrição", LocalDateTime.now().plusDays(1), 100, 0, "http://image.url", null, "Local", false);
+        LocalDateTime start = LocalDateTime.now().plusDays(1);
+        LocalDateTime end = start.plusHours(2);
+        EventRequestDTO requestDTO = new EventRequestDTO("Novo Evento", "Descrição", start, end, 100, "http://image.url", null, "Local", false);
+        EventResponseDTO createdEventResponse = new EventResponseDTO(UUID.randomUUID(), "Novo Evento", "Descrição", start, end, 100, 0, "http://image.url", null, "Local", false);
 
         when(eventUseCase.createEvent(any(EventRequestDTO.class))).thenReturn(createdEventResponse);
 
@@ -142,7 +153,8 @@ class EventControllerTest {
     @DisplayName("Should return status 400 when calling POST /events with invalid data")
     void createEvent_withInvalidData_shouldReturnBadRequest() throws Exception {
         // Arrange
-        EventRequestDTO requestDTO = new EventRequestDTO("", "Descrição", LocalDateTime.now().plusDays(1), 100, "http://image.url", null, "Local", false);
+        LocalDateTime start = LocalDateTime.now().plusDays(1);
+        EventRequestDTO requestDTO = new EventRequestDTO("", "Descrição", start, start.plusHours(1), 100, "http://image.url", null, "Local", false);
 
         // Act & Assert
         mockMvc.perform(post("/events")
@@ -158,7 +170,7 @@ class EventControllerTest {
         // Arrange
         UUID eventId = UUID.randomUUID();
         SubscriptionRequestDTO subscriptionDTO = new SubscriptionRequestDTO("test@example.com");
-        
+
         doNothing().when(eventUseCase).registerParticipant(eq(eventId), any(SubscriptionRequestDTO.class));
 
         // Act & Assert

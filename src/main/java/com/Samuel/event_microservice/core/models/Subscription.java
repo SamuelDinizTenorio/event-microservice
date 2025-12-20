@@ -2,11 +2,11 @@ package com.Samuel.event_microservice.core.models;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
  * Representa a entidade Subscription (inscrição) no banco de dados.
@@ -16,7 +16,6 @@ import java.time.LocalDateTime;
 @Table(name = "subscription")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PRIVATE, force = true)
-@EqualsAndHashCode(of = "id")
 public class Subscription {
 
     @Id
@@ -50,5 +49,20 @@ public class Subscription {
         this.event = event;
         this.participantEmail = participantEmail;
         this.createdAt = LocalDateTime.now(); // Define a data de criação
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Subscription that = (Subscription) o;
+        // Compara pela identidade (ID) apenas se o ID não for nulo.
+        return id != null && Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        // Retorna um valor constante para garantir que o hashCode não mude.
+        return getClass().hashCode();
     }
 }

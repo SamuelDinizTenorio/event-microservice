@@ -52,7 +52,8 @@ public class EventService implements EventUseCase {
         Event newEvent = new Event(
                 eventRequest.title(),
                 eventRequest.description(),
-                eventRequest.date(),
+                eventRequest.startDateTime(),
+                eventRequest.endDateTime(),
                 eventRequest.maxParticipants(),
                 eventRequest.imageUrl(),
                 eventRequest.eventUrl(),

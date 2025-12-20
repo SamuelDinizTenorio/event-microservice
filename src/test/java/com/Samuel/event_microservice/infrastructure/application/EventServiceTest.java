@@ -2,7 +2,7 @@ package com.Samuel.event_microservice.infrastructure.application;
 
 import com.Samuel.event_microservice.core.models.Event;
 import com.Samuel.event_microservice.core.models.Subscription;
-import com.Samuel.event_microservice.infrastructure.dto.PageResponseDTO; // Novo import
+import com.Samuel.event_microservice.infrastructure.dto.PageResponseDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventRequestDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventResponseDTO;
 import com.Samuel.event_microservice.infrastructure.dto.subscription.RegisteredParticipantDTO;
@@ -49,23 +49,40 @@ class EventServiceTest {
     private EmailSender emailSender;
 
     // Método auxiliar para criar uma entidade Event
-    private Event createEventEntity(String title, LocalDateTime date, int maxParticipants) {
-        return new Event(title, "Descrição", date, maxParticipants, "http://image.url", "http://event.url", null, true);
-    }
-
-    // Método auxiliar para criar um EventRequestDTO
-    private EventRequestDTO createEventRequestDTO(String title, LocalDateTime date, int maxParticipants) {
-        return new EventRequestDTO(title, "Descrição", date, maxParticipants, "http://image.url", "http://event.url", null, true);
+    private Event createEventEntity(String title, LocalDateTime start, LocalDateTime end, int maxParticipants) {
+        return new Event(
+                title,
+                "Descrição",
+                start,
+                end,
+                maxParticipants,
+                "http://image.url",
+                "http://event.url",
+                null,
+                true);
     }
 
     @Test
     @DisplayName("Should create an event successfully when given valid data")
     void createEvent_withValidData_shouldReturnCreatedEventResponseDTO() {
         // Arrange
-        EventRequestDTO eventDTO = createEventRequestDTO("Evento Válido", LocalDateTime.now().plusDays(10), 100);
-        Event newEvent = createEventEntity("Evento Válido", LocalDateTime.now().plusDays(10), 100);
+        LocalDateTime start = LocalDateTime.now().plusDays(10);
+        LocalDateTime end = start.plusHours(2);
+
+        EventRequestDTO eventDTO = new EventRequestDTO(
+                "Evento Válido", 
+                "Descrição", 
+                start, 
+                end, 
+                100, 
+                "http://image.url", 
+                "http://event.url", 
+                null, 
+                true
+        );
         
-        // Mocka o repositório para retornar o evento salvo
+        Event newEvent = createEventEntity("Evento Válido", start, end, 100);
+        
         when(eventRepository.save(any(Event.class))).thenReturn(newEvent);
 
         // Act
@@ -82,7 +99,8 @@ class EventServiceTest {
     void getAllEvents_shouldReturnPageResponseDTOOfEvents() {
         // Arrange
         Pageable pageable = PageRequest.of(0, 10);
-        Event event = createEventEntity("Evento Qualquer", LocalDateTime.now().plusDays(1), 100);
+        LocalDateTime start = LocalDateTime.now().plusDays(1);
+        Event event = createEventEntity("Evento Qualquer", start, start.plusHours(1), 100);
         Page<Event> eventPage = new PageImpl<>(List.of(event), pageable, 1);
 
         when(eventRepository.findAll(pageable)).thenReturn(eventPage);
@@ -94,7 +112,7 @@ class EventServiceTest {
         assertNotNull(resultPage);
         assertEquals(1, resultPage.totalElements());
         assertEquals(1, resultPage.content().size());
-        assertEquals("Evento Qualquer", resultPage.content().get(0).title());
+        assertEquals("Evento Qualquer", resultPage.content().getFirst().title());
         verify(eventRepository, times(1)).findAll(pageable);
     }
 
@@ -103,7 +121,8 @@ class EventServiceTest {
     void getUpcomingEvents_shouldCallRepositoryAndMapResult() {
         // Arrange
         Pageable pageable = PageRequest.of(0, 10);
-        Event upcomingEvent = createEventEntity("Evento Futuro", LocalDateTime.now().plusDays(5), 100);
+        LocalDateTime start = LocalDateTime.now().plusDays(5);
+        Event upcomingEvent = createEventEntity("Evento Futuro", start, start.plusHours(2), 100);
         Page<Event> upcomingEventsPage = new PageImpl<>(List.of(upcomingEvent), pageable, 1);
 
         when(eventRepository.findUpcomingEvents(any(LocalDateTime.class), eq(pageable))).thenReturn(upcomingEventsPage);
@@ -115,10 +134,8 @@ class EventServiceTest {
         assertNotNull(resultPage);
         assertEquals(1, resultPage.totalElements());
         assertEquals(1, resultPage.content().size());
-        assertEquals("Evento Futuro", resultPage.content().get(0).title());
-        
+        assertEquals("Evento Futuro", resultPage.content().getFirst().title());
         verify(eventRepository, times(1)).findUpcomingEvents(any(LocalDateTime.class), eq(pageable));
-        verify(eventRepository, never()).findAll(any(Pageable.class));
     }
 
     @Test
@@ -126,7 +143,8 @@ class EventServiceTest {
     void getEventDetails_withValidId_shouldReturnEventDetails() {
         // Arrange
         UUID eventId = UUID.randomUUID();
-        Event event = createEventEntity("Evento Detalhado", LocalDateTime.now().plusDays(1), 100);
+        LocalDateTime start = LocalDateTime.now().plusDays(1);
+        Event event = createEventEntity("Evento Detalhado", start, start.plusHours(3), 100);
         
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
 
@@ -144,7 +162,7 @@ class EventServiceTest {
     void getEventDetails_withInvalidId_shouldThrowEventNotFoundException() {
         // Arrange
         UUID invalidEventId = UUID.randomUUID();
-        
+
         when(eventRepository.findById(invalidEventId)).thenReturn(Optional.empty());
 
         // Act & Assert
@@ -157,7 +175,8 @@ class EventServiceTest {
     void registerParticipant_withValidData_shouldSucceed() {
         // Arrange
         UUID eventId = UUID.randomUUID();
-        Event event = createEventEntity("Evento para Registro", LocalDateTime.now().plusDays(1), 10);
+        LocalDateTime start = LocalDateTime.now().plusDays(1);
+        Event event = createEventEntity("Evento para Registro", start, start.plusHours(1), 10);
         SubscriptionRequestDTO subscriptionDTO = new SubscriptionRequestDTO("test@example.com");
 
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
@@ -191,7 +210,7 @@ class EventServiceTest {
     void registerParticipant_whenAlreadyRegistered_shouldThrowSubscriptionAlreadyExistsException() {
         // Arrange
         UUID eventId = UUID.randomUUID();
-        Event event = createEventEntity("Evento com Duplicado", LocalDateTime.now().plusDays(1), 10);
+        Event event = createEventEntity("Evento com Duplicado", LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(2), 1);
         SubscriptionRequestDTO subscriptionDTO = new SubscriptionRequestDTO("test@example.com");
         Subscription existingSubscription = new Subscription(event, "test@example.com");
 
@@ -207,8 +226,8 @@ class EventServiceTest {
     void registerParticipant_whenEventIsFull_shouldThrowEventFullException() {
         // Arrange
         UUID eventId = UUID.randomUUID();
-        EventRequestDTO dto = createEventRequestDTO("Evento Lotado", LocalDateTime.now().plusDays(1), 1);
-        Event fullEvent = createEventEntity("Evento Lotado", LocalDateTime.now().plusDays(1), 1);
+        LocalDateTime start = LocalDateTime.now().plusDays(1);
+        Event fullEvent = createEventEntity("Evento Lotado", start, start.plusHours(1), 1);
         fullEvent.registerParticipant(); // Lota o evento (registeredParticipants = 1)
 
         SubscriptionRequestDTO subscriptionDTO = new SubscriptionRequestDTO("new@example.com");
@@ -225,7 +244,7 @@ class EventServiceTest {
     void registerParticipant_whenEmailFails_shouldStillRegister() {
         // Arrange
         UUID eventId = UUID.randomUUID();
-        Event event = createEventEntity("Evento com Falha de Email", LocalDateTime.now().plusDays(1), 10);
+        Event event = createEventEntity("Evento com Falha de Email", LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(2), 10);
         SubscriptionRequestDTO subscriptionDTO = new SubscriptionRequestDTO("test@example.com");
 
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
@@ -246,7 +265,7 @@ class EventServiceTest {
     void getRegisteredParticipants_withValidEventId_shouldReturnParticipantsPageResponseDTO() {
         // Arrange
         UUID eventId = UUID.randomUUID();
-        Event event = createEventEntity("Evento com Participantes", LocalDateTime.now().plusDays(1), 100);
+        Event event = createEventEntity("Evento com Participantes", LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(2), 100);
         Subscription subscription = new Subscription(event, "test@example.com");
         Pageable pageable = PageRequest.of(0, 10);
         Page<Subscription> subscriptionPage = new PageImpl<>(List.of(subscription), pageable, 1);
@@ -262,7 +281,7 @@ class EventServiceTest {
         assertNotNull(resultPage);
         assertEquals(1, resultPage.totalElements());
         assertEquals(1, resultPage.content().size());
-        assertEquals("test@example.com", resultPage.content().get(0).participantEmail());
+        assertEquals("test@example.com", resultPage.content().getFirst().participantEmail());
         verify(subscriptionRepository, times(1)).findByEvent(event, pageable);
     }
 

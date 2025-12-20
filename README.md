@@ -32,6 +32,7 @@ O projeto foi construído seguindo princípios de **Arquitetura Limpa (Hexagonal
 - **Maven**: Para gerenciamento de dependências e build.
 - **Docker & Docker Compose**: Para containerização do ambiente de desenvolvimento.
 - **Testcontainers**: Para testes de integração com um banco de dados real.
+- **JUnit 5 & Mockito**: Para testes unitários e de integração.
 - **Lombok**: Para reduzir código boilerplate.
 
 ---
@@ -109,9 +110,13 @@ Esta abordagem é ideal para desenvolvimento e depuração.
 
 ## 🧪 Testes
 
-O projeto utiliza **Testcontainers** para executar os testes de integração da camada de persistência (`@DataJpaTest`) contra um banco de dados PostgreSQL real, garantindo que os testes sejam fiéis ao ambiente de produção.
+A estratégia de testes do projeto é dividida em camadas para garantir cobertura e velocidade.
 
-- **Pré-requisito:** Para executar os testes, é necessário ter o **Docker em execução** na sua máquina.
+- **JUnit 5** é o framework principal para a escrita de todos os testes.
+- **Mockito** é utilizado para criar "mocks" (objetos falsos) de dependências externas, permitindo isolar a lógica de negócio nos testes de serviço e de controller.
+- **Testcontainers** é usado nos testes da camada de persistência (`@DataJpaTest`) para iniciar um container Docker do PostgreSQL. Isso garante que as queries e migrações sejam testadas contra um banco de dados real, idêntico ao de produção.
+
+- **Pré-requisito:** Para executar os testes de integração, é necessário ter o **Docker em execução** na sua máquina.
 
 - **Executando os testes:**
   Você pode rodar todos os testes através do Maven com o comando:
@@ -134,9 +139,117 @@ A arquitetura do projeto permite a troca do banco de dados. Para isso, você pre
 
 ## 📋 Endpoints da API
 
-- `GET /events`: Lista todos os eventos de forma paginada.
-- `GET /events/upcoming`: Lista todos os eventos futuros de forma paginada.
-- `GET /events/{id}`: Obtém os detalhes de um evento específico.
-- `POST /events`: Cria um novo evento.
-- `POST /events/{eventId}/register`: Registra um participante em um evento.
-- `GET /events/{eventId}/participants`: Lista os participantes de um evento de forma paginada.
+### Eventos
+
+#### `GET /events`
+Lista todos os eventos de forma paginada.
+- **Parâmetros (Query):** `page`, `size`, `sort`.
+- **Resposta (`200 OK`):**
+  ```json
+  {
+    "content": [
+      {
+        "id": "c1f7a3d0-...",
+        "title": "Tech Conference 2024",
+        "description": "Um evento sobre tecnologia.",
+        "startDateTime": "2024-12-25T14:00:00",
+        "endDateTime": "2024-12-25T16:00:00",
+        "maxParticipants": 100,
+        "registeredParticipants": 42,
+        "imageUrl": "http://...",
+        "eventUrl": "http://...",
+        "location": "São Paulo, SP",
+        "isRemote": false
+      }
+    ],
+    "page": 0,
+    "size": 10,
+    "total_elements": 1,
+    "total_pages": 1,
+    "is_last": true
+  }
+  ```
+
+#### `GET /events/upcoming`
+Lista apenas os eventos futuros de forma paginada.
+- **Parâmetros (Query):** Mesmos de `/events`.
+- **Resposta (`200 OK`):** Mesma estrutura de `GET /events`.
+
+#### `GET /events/{id}`
+Obtém os detalhes completos de um evento específico.
+- **Parâmetros (Path):** `id` (UUID).
+- **Resposta (`200 OK`):**
+  ```json
+  {
+    "id": "c1f7a3d0-...",
+    "title": "Tech Conference 2024",
+    "description": "Um evento sobre tecnologia.",
+    "startDateTime": "2024-12-25T14:00:00",
+    "endDateTime": "2024-12-25T16:00:00",
+    "maxParticipants": 100,
+    "registeredParticipants": 42,
+    "imageUrl": "http://...",
+    "eventUrl": "http://...",
+    "location": "São Paulo, SP",
+    "isRemote": false
+  }
+  ```
+
+#### `POST /events`
+Cria um novo evento.
+- **Corpo (JSON):**
+  ```json
+  {
+    "title": "Tech Conference 2024",
+    "description": "Um evento sobre tecnologia.",
+    "startDateTime": "2024-12-25T14:00:00",
+    "endDateTime": "2024-12-25T16:00:00",
+    "maxParticipants": 100,
+    "imageUrl": "http://...",
+    "eventUrl": "http://...",
+    "location": "São Paulo, SP",
+    "isRemote": false
+  }
+  ```
+- **Resposta (`201 Created`):** Mesma estrutura de `GET /events/{id}`.
+
+### Inscrições
+
+#### `POST /events/{eventId}/register`
+Registra um participante em um evento.
+- **Parâmetros (Path):** `eventId` (UUID).
+- **Corpo (JSON):**
+  ```json
+  {
+    "participantEmail": "usuario@exemplo.com"
+  }
+  ```
+- **Resposta (`200 OK`):**
+  ```json
+  {
+    "message": "Inscrição realizada com sucesso!"
+  }
+  ```
+
+#### `GET /events/{eventId}/participants`
+Lista os participantes inscritos em um evento de forma paginada.
+- **Parâmetros (Path):** `eventId` (UUID).
+- **Parâmetros (Query):** `page`, `size`, `sort`.
+- **Resposta (`200 OK`):**
+  ```json
+  {
+    "content": [
+      {
+        "participantEmail": "usuario1@exemplo.com"
+      },
+      {
+        "participantEmail": "usuario2@exemplo.com"
+      }
+    ],
+    "page": 0,
+    "size": 10,
+    "total_elements": 2,
+    "total_pages": 1,
+    "is_last": true
+  }
+  ```

@@ -15,7 +15,8 @@ import java.time.LocalDateTime;
  *
  * @param title           O título do evento. Não pode estar em branco.
  * @param description     A descrição detalhada do evento. Não pode estar em branco.
- * @param date            A data e hora do evento. Não pode ser nula e deve ser no futuro.
+ * @param startDateTime   A data e hora de início do evento. Deve ser no futuro.
+ * @param endDateTime     A data e hora de encerramento do evento. Deve ser no futuro.
  * @param maxParticipants O número máximo de participantes permitidos. Deve ser no mínimo 1.
  * @param imageUrl        A URL de uma imagem de banner para o evento. Deve ser uma URL válida.
  * @param eventUrl        A URL para acessar o evento, caso seja remoto. Validado condicionalmente.
@@ -30,9 +31,13 @@ public record EventRequestDTO(
         @NotBlank(message = "A descrição não pode estar em branco.")
         String description,
 
-        @NotNull(message = "A data não pode ser nula.")
-        @Future(message = "A data do evento deve ser no futuro.")
-        LocalDateTime date,
+        @NotNull(message = "A data de início não pode ser nula.")
+        @Future(message = "A data de início do evento deve ser no futuro.")
+        LocalDateTime startDateTime,
+
+        @NotNull(message = "A data de encerramento não pode ser nula.")
+        @Future(message = "A data de encerramento do evento deve ser no futuro.")
+        LocalDateTime endDateTime,
 
         @Min(value = 1, message = "O número máximo de participantes deve ser de no mínimo 1.")
         int maxParticipants,

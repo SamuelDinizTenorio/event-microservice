@@ -1,6 +1,5 @@
 package com.Samuel.event_microservice.infrastructure.validation.utils;
 
-import com.Samuel.event_microservice.infrastructure.validation.utils.ValidationUtils;
 import jakarta.validation.ConstraintValidatorContext;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
