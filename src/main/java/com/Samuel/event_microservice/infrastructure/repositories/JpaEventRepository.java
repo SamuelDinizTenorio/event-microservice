@@ -22,10 +22,15 @@ public interface JpaEventRepository extends JpaRepository<Event, UUID>, EventRep
 
     /**
      * {@inheritDoc}
-     * <p>
-     * A implementação deste método é fornecida pelo Spring Data JPA.
+     */
+    @Query("SELECT e FROM event e WHERE e.status = com.Samuel.event_microservice.core.models.EventStatus.ACTIVE")
+    @Override
+    Page<Event> findAll(Pageable pageable);
+
+    /**
+     * {@inheritDoc}
      */
     @Override
-    @Query("SELECT e FROM event e WHERE e.startDateTime > :currentDate")
+    @Query("SELECT e FROM event e WHERE e.startDateTime > :currentDate AND e.status = com.Samuel.event_microservice.core.models.EventStatus.ACTIVE")
     Page<Event> findUpcomingEvents(@Param("currentDate") LocalDateTime currentDate, Pageable pageable);
 }

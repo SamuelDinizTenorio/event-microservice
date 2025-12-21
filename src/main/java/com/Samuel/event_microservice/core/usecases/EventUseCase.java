@@ -19,7 +19,7 @@ import java.util.UUID;
 public interface EventUseCase {
 
     /**
-     * Cria um novo evento com base nos dados fornecidos.
+     * Cria um evento com base nos dados fornecidos.
      *
      * @param eventRequest DTO com os dados do evento a ser criado.
      * @return Um DTO com os detalhes do evento que foi criado.
@@ -50,6 +50,13 @@ public interface EventUseCase {
      * @throws EventNotFoundException se o evento com o ID fornecido não for encontrado.
      */
     EventResponseDTO getEventDetails(UUID id);
+
+    /**
+     * Cancela um evento, marcando seu status como CANCELLED.
+     *
+     * @param eventId O UUID do evento a ser cancelado.
+     */
+    void cancelEvent(UUID eventId);
 
     /**
      * Registra um participante em um evento específico.

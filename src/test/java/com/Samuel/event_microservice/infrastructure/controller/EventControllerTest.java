@@ -165,6 +165,34 @@ class EventControllerTest {
     }
 
     @Test
+    @DisplayName("Should return status 200 and success message when cancelling an event successfully")
+    void cancelEvent_withValidId_shouldReturnOk() throws Exception {
+        // Arrange
+        UUID eventId = UUID.randomUUID();
+        doNothing().when(eventUseCase).cancelEvent(eventId);
+
+        // Act & Assert
+        mockMvc.perform(post("/events/{id}/cancel", eventId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Evento cancelado com sucesso!"));
+    }
+
+    @Test
+    @DisplayName("Should return status 404 when cancelling a non-existent event")
+    void cancelEvent_withInvalidId_shouldReturnNotFound() throws Exception {
+        // Arrange
+        UUID invalidEventId = UUID.randomUUID();
+        doThrow(new EventNotFoundException("Evento não encontrado.")).when(eventUseCase).cancelEvent(invalidEventId);
+
+        // Act & Assert
+        mockMvc.perform(post("/events/{id}/cancel", invalidEventId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Evento não encontrado."));
+    }
+
+    @Test
     @DisplayName("Should return status 200 and success message when registering a participant successfully")
     void registerParticipant_withValidData_shouldReturnOk() throws Exception {
         // Arrange

@@ -35,8 +35,11 @@ public class Event {
     private String location; // O endereço físico do evento, caso seja presencial.
     private Boolean isRemote; // Indica se o evento é remoto (online) ou não.
 
+    @Enumerated(EnumType.STRING) // Salva o nome do enum (ACTIVE, CANCELLED) no banco
+    private EventStatus status;
+
     /**
-     * Construtor para criar uma nova instância de Event com validações de domínio.
+     * Construtor para criar uma instância de Event com validações de domínio.
      *
      * @param title O título do evento.
      * @param description A descrição do evento.
@@ -77,18 +80,26 @@ public class Event {
         this.eventUrl = eventUrl;
         this.location = location;
         this.isRemote = isRemote;
+        this.status = EventStatus.ACTIVE; // Inicializa como ativo por padrão
     }
 
     /**
      * Incrementa o contador de participantes registrados no evento.
      *
-     * @throws EventFullException se o evento já atingiu sua capacidade máxima.
+     * @throws EventFullException se o evento já atingiu a sua capacidade máxima.
      */
     public void registerParticipant() {
         if (this.registeredParticipants >= this.maxParticipants) {
             throw new EventFullException();
         }
         this.registeredParticipants++;
+    }
+
+    /**
+     * Cancela o evento, alterando seu status.
+     */
+    public void cancel() {
+        this.status = EventStatus.CANCELLED;
     }
 
     @Override

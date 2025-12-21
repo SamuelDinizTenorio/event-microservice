@@ -142,7 +142,7 @@ A arquitetura do projeto permite a troca do banco de dados. Para isso, você pre
 ### Eventos
 
 #### `GET /events`
-Lista todos os eventos de forma paginada.
+Lista todos os eventos ativos de forma paginada.
 - **Parâmetros (Query):** `page`, `size`, `sort`.
 - **Resposta (`200 OK`):**
   ```json
@@ -171,7 +171,7 @@ Lista todos os eventos de forma paginada.
   ```
 
 #### `GET /events/upcoming`
-Lista apenas os eventos futuros de forma paginada.
+Lista apenas os eventos futuros e ativos de forma paginada.
 - **Parâmetros (Query):** Mesmos de `/events`.
 - **Resposta (`200 OK`):** Mesma estrutura de `GET /events`.
 
@@ -212,6 +212,17 @@ Cria um novo evento.
   }
   ```
 - **Resposta (`201 Created`):** Mesma estrutura de `GET /events/{id}`.
+
+#### `POST /events/{id}/cancel`
+Cancela um evento (Soft Delete), alterando seu status para `CANCELLED`.
+- **Parâmetros (Path):** `id` (UUID).
+- **Corpo:** Vazio.
+- **Resposta (`200 OK`):**
+  ```json
+  {
+    "message": "Evento cancelado com sucesso!"
+  }
+  ```
 
 ### Inscrições
 

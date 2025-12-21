@@ -1,5 +1,6 @@
 package com.Samuel.event_microservice.infrastructure.adapters;
 
+import com.Samuel.event_microservice.infrastructure.clients.EmailServiceClient;
 import com.Samuel.event_microservice.infrastructure.dto.EmailRequestDTO;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

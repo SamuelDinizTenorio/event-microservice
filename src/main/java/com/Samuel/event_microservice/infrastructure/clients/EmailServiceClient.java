@@ -1,4 +1,4 @@
-package com.Samuel.event_microservice.infrastructure.adapters;
+package com.Samuel.event_microservice.infrastructure.clients;
 
 import com.Samuel.event_microservice.infrastructure.dto.EmailRequestDTO;
 import org.springframework.cloud.openfeign.FeignClient;

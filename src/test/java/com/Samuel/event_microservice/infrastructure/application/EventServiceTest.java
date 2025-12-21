@@ -1,7 +1,9 @@
 package com.Samuel.event_microservice.infrastructure.application;
 
 import com.Samuel.event_microservice.core.models.Event;
+import com.Samuel.event_microservice.core.models.EventStatus;
 import com.Samuel.event_microservice.core.models.Subscription;
+import com.Samuel.event_microservice.infrastructure.adapters.EventNotificationAdapter;
 import com.Samuel.event_microservice.infrastructure.dto.PageResponseDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventRequestDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventResponseDTO;
@@ -10,7 +12,6 @@ import com.Samuel.event_microservice.infrastructure.dto.subscription.Subscriptio
 import com.Samuel.event_microservice.core.exceptions.EventFullException;
 import com.Samuel.event_microservice.core.exceptions.EventNotFoundException;
 import com.Samuel.event_microservice.core.exceptions.SubscriptionAlreadyExistsException;
-import com.Samuel.event_microservice.core.ports.EmailSender;
 import com.Samuel.event_microservice.core.ports.EventRepositoryPort;
 import com.Samuel.event_microservice.core.ports.SubscriptionRepositoryPort;
 import org.junit.jupiter.api.DisplayName;
@@ -46,7 +47,7 @@ class EventServiceTest {
     private SubscriptionRepositoryPort subscriptionRepository;
 
     @Mock
-    private EmailSender emailSender;
+    private EventNotificationAdapter eventNotificationAdapter;
 
     // Método auxiliar para criar uma entidade Event
     private Event createEventEntity(String title, LocalDateTime start, LocalDateTime end, int maxParticipants) {
@@ -70,17 +71,17 @@ class EventServiceTest {
         LocalDateTime end = start.plusHours(2);
 
         EventRequestDTO eventDTO = new EventRequestDTO(
-                "Evento Válido", 
-                "Descrição", 
-                start, 
-                end, 
-                100, 
-                "http://image.url", 
-                "http://event.url", 
-                null, 
+                "Evento Válido",
+                "Descrição",
+                start,
+                end,
+                100,
+                "http://image.url",
+                "http://event.url",
+                null,
                 true
         );
-        
+
         Event newEvent = createEventEntity("Evento Válido", start, end, 100);
         
         when(eventRepository.save(any(Event.class))).thenReturn(newEvent);
@@ -145,7 +146,7 @@ class EventServiceTest {
         UUID eventId = UUID.randomUUID();
         LocalDateTime start = LocalDateTime.now().plusDays(1);
         Event event = createEventEntity("Evento Detalhado", start, start.plusHours(3), 100);
-        
+
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
 
         // Act
@@ -171,8 +172,8 @@ class EventServiceTest {
     }
 
     @Test
-    @DisplayName("Should register participant successfully when all conditions are met")
-    void registerParticipant_withValidData_shouldSucceed() {
+    @DisplayName("Should register participant successfully and send confirmation email")
+    void registerParticipant_withValidData_shouldSucceedAndNotify() {
         // Arrange
         UUID eventId = UUID.randomUUID();
         LocalDateTime start = LocalDateTime.now().plusDays(1);
@@ -181,6 +182,7 @@ class EventServiceTest {
 
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
         when(subscriptionRepository.findByEventAndParticipantEmail(event, "test@example.com")).thenReturn(Optional.empty());
+        doNothing().when(eventNotificationAdapter).sendRegistrationConfirmation(any(Event.class), anyString());
 
         // Act
         eventService.registerParticipant(eventId, subscriptionDTO);
@@ -188,7 +190,7 @@ class EventServiceTest {
         // Assert
         verify(subscriptionRepository, times(1)).save(any(Subscription.class));
         verify(eventRepository, times(1)).save(event);
-        verify(emailSender, times(1)).sendEmail(any());
+        verify(eventNotificationAdapter, times(1)).sendRegistrationConfirmation(event, "test@example.com");
         assertEquals(1, event.getRegisteredParticipants());
     }
 
@@ -240,16 +242,19 @@ class EventServiceTest {
     }
 
     @Test
-    @DisplayName("Should complete registration even if email sending fails")
-    void registerParticipant_whenEmailFails_shouldStillRegister() {
+    @DisplayName("Should complete registration even if notification fails")
+    void registerParticipant_whenNotificationFails_shouldStillRegister() {
         // Arrange
         UUID eventId = UUID.randomUUID();
-        Event event = createEventEntity("Evento com Falha de Email", LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(2), 10);
+        LocalDateTime start = LocalDateTime.now().plusDays(1);
+        Event event = createEventEntity("Evento com Falha de Email", start, start.plusHours(2), 10);
         SubscriptionRequestDTO subscriptionDTO = new SubscriptionRequestDTO("test@example.com");
 
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
         when(subscriptionRepository.findByEventAndParticipantEmail(event, "test@example.com")).thenReturn(Optional.empty());
-        doThrow(new RuntimeException("Email service is down")).when(emailSender).sendEmail(any());
+        
+        // Simula falha no serviço de notificação
+        doThrow(new RuntimeException("Email service is down")).when(eventNotificationAdapter).sendRegistrationConfirmation(any(Event.class), anyString());
 
         // Act
         eventService.registerParticipant(eventId, subscriptionDTO);
@@ -257,7 +262,7 @@ class EventServiceTest {
         // Assert
         verify(subscriptionRepository, times(1)).save(any(Subscription.class));
         verify(eventRepository, times(1)).save(event);
-        verify(emailSender, times(1)).sendEmail(any());
+        verify(eventNotificationAdapter, times(1)).sendRegistrationConfirmation(event, "test@example.com");
     }
 
     @Test
@@ -297,5 +302,43 @@ class EventServiceTest {
         // Act & Assert
         assertThrows(EventNotFoundException.class, () -> eventService.getRegisteredParticipants(invalidEventId, pageable));
         verify(subscriptionRepository, never()).findByEvent(any(), any());
+    }
+
+    @Test
+    @DisplayName("Should cancel an event and notify participants")
+    void cancelEvent_withValidEvent_shouldCancelAndNotify() {
+        // Arrange
+        UUID eventId = UUID.randomUUID();
+        LocalDateTime start = LocalDateTime.now().plusDays(1);
+        Event event = createEventEntity("Evento para Cancelar", start, start.plusHours(1), 10);
+
+        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
+        doNothing().when(eventNotificationAdapter).notifyParticipantsOfCancellation(any(Event.class));
+
+        // Act
+        eventService.cancelEvent(eventId);
+
+        // Assert
+        assertEquals(EventStatus.CANCELLED, event.getStatus());
+        verify(eventRepository, times(1)).save(event);
+        verify(eventNotificationAdapter, times(1)).notifyParticipantsOfCancellation(event);
+    }
+
+    @Test
+    @DisplayName("Should throw exception when trying to register for an inactive event")
+    void registerParticipant_forInactiveEvent_shouldThrowException() {
+        // Arrange
+        UUID eventId = UUID.randomUUID();
+        LocalDateTime start = LocalDateTime.now().plusDays(1);
+        Event cancelledEvent = createEventEntity("Evento Cancelado", start, start.plusHours(1), 10);
+        cancelledEvent.cancel(); // Cancela o evento
+        SubscriptionRequestDTO subscriptionDTO = new SubscriptionRequestDTO("test@example.com");
+
+        when(eventRepository.findById(eventId)).thenReturn(Optional.of(cancelledEvent));
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () -> {
+            eventService.registerParticipant(eventId, subscriptionDTO);
+        });
     }
 }

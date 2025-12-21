@@ -9,6 +9,8 @@ import com.Samuel.event_microservice.infrastructure.dto.SuccessResponseDTO;
 import com.Samuel.event_microservice.core.usecases.EventUseCase;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -30,6 +32,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class EventController {
 
+    private static final Logger logger = LoggerFactory.getLogger(EventController.class);
     private final EventUseCase eventUseCase;
 
     /**
@@ -40,7 +43,8 @@ public class EventController {
      */
     @GetMapping
     public ResponseEntity<PageResponseDTO<EventResponseDTO>> getAllEvents(
-            @PageableDefault(sort = "date", direction = Sort.Direction.ASC) Pageable pageable) {
+            @PageableDefault(sort = "startDateTime", direction = Sort.Direction.ASC) Pageable pageable) {
+        logger.info("Received request to get all events. Page: {}, Size: {}", pageable.getPageNumber(), pageable.getPageSize());
         PageResponseDTO<EventResponseDTO> events = eventUseCase.getAllEvents(pageable);
         return ResponseEntity.ok(events);
     }
@@ -53,7 +57,8 @@ public class EventController {
      */
     @GetMapping("/upcoming")
     public ResponseEntity<PageResponseDTO<EventResponseDTO>> getUpcomingEvents(
-            @PageableDefault(sort = "date", direction = Sort.Direction.ASC) Pageable pageable) {
+            @PageableDefault(sort = "startDateTime", direction = Sort.Direction.ASC) Pageable pageable) {
+        logger.info("Received request to get upcoming events. Page: {}, Size: {}", pageable.getPageNumber(), pageable.getPageSize());
         PageResponseDTO<EventResponseDTO> events = eventUseCase.getUpcomingEvents(pageable);
         return ResponseEntity.ok(events);
     }
@@ -66,12 +71,13 @@ public class EventController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<EventResponseDTO> getEventDetails(@PathVariable UUID id) {
+        logger.info("Received request to get details for event with ID: {}", id);
         EventResponseDTO event = eventUseCase.getEventDetails(id);
         return ResponseEntity.ok(event);
     }
 
     /**
-     * Cria um novo evento com base nos dados fornecidos no corpo da requisição.
+     * Cria um evento com base nos dados fornecidos no corpo da requisição.
      *
      * @param eventRequest O DTO com os dados para a criação do evento, validado pelo framework.
      * @return Um {@link ResponseEntity} com status 201 Created, o header 'Location' para o novo recurso,
@@ -79,6 +85,7 @@ public class EventController {
      */
     @PostMapping
     public ResponseEntity<EventResponseDTO> createEvent(@RequestBody @Valid EventRequestDTO eventRequest) {
+        logger.info("Received request to create a new event with title: {}", eventRequest.title());
         EventResponseDTO createdEvent = eventUseCase.createEvent(eventRequest);
         
         URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -90,6 +97,20 @@ public class EventController {
     }
 
     /**
+     * Cancela um evento, marcando o seu status como CANCELLED.
+     *
+     * @param id O UUID do evento a ser cancelado.
+     * @return Um {@link ResponseEntity} com status 200 OK e uma mensagem de sucesso.
+     */
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<SuccessResponseDTO> cancelEvent(@PathVariable UUID id) {
+        logger.info("Received request to cancel event with ID: {}", id);
+        eventUseCase.cancelEvent(id);
+        SuccessResponseDTO response = new SuccessResponseDTO("Evento cancelado com sucesso!");
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * Registra um participante em um evento específico.
      *
      * @param eventId O UUID do evento, fornecido como uma variável de caminho.
@@ -97,8 +118,10 @@ public class EventController {
      * @return Um {@link ResponseEntity} com status 200 OK e uma mensagem de sucesso.
      */
     @PostMapping("/{eventId}/register")
-    public ResponseEntity<SuccessResponseDTO> registerParticipant(@PathVariable UUID eventId,
-                                                                  @RequestBody @Valid SubscriptionRequestDTO subscriptionRequest) {
+    public ResponseEntity<SuccessResponseDTO> registerParticipant(
+            @PathVariable UUID eventId,
+            @RequestBody @Valid SubscriptionRequestDTO subscriptionRequest) {
+        logger.info("Received request to register participant {} for event {}", subscriptionRequest.participantEmail(), eventId);
         eventUseCase.registerParticipant(eventId, subscriptionRequest);
         SuccessResponseDTO response = new SuccessResponseDTO("Inscrição realizada com sucesso!");
         return ResponseEntity.ok(response);
@@ -115,6 +138,7 @@ public class EventController {
     public ResponseEntity<PageResponseDTO<RegisteredParticipantDTO>> getRegisteredParticipants(
             @PathVariable UUID eventId,
             @PageableDefault(sort = "createdAt", direction = Sort.Direction.ASC) Pageable pageable) {
+        logger.info("Received request to get participants for event {}. Page: {}, Size: {}", eventId, pageable.getPageNumber(), pageable.getPageSize());
         PageResponseDTO<RegisteredParticipantDTO> participants = eventUseCase.getRegisteredParticipants(eventId, pageable);
         return ResponseEntity.ok(participants);
     }

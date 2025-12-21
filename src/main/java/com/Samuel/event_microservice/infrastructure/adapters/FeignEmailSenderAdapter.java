@@ -1,5 +1,6 @@
 package com.Samuel.event_microservice.infrastructure.adapters;
 
+import com.Samuel.event_microservice.infrastructure.clients.EmailServiceClient;
 import com.Samuel.event_microservice.infrastructure.dto.EmailRequestDTO;
 import com.Samuel.event_microservice.core.ports.EmailSender;
 import lombok.RequiredArgsConstructor;

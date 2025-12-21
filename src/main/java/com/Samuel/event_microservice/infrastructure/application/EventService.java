@@ -1,15 +1,15 @@
 package com.Samuel.event_microservice.infrastructure.application;
 
 import com.Samuel.event_microservice.core.models.Event;
+import com.Samuel.event_microservice.core.models.EventStatus;
 import com.Samuel.event_microservice.core.models.Subscription;
 import com.Samuel.event_microservice.core.exceptions.EventFullException;
 import com.Samuel.event_microservice.core.exceptions.EventNotFoundException;
 import com.Samuel.event_microservice.core.exceptions.SubscriptionAlreadyExistsException;
-import com.Samuel.event_microservice.core.ports.EmailSender;
+import com.Samuel.event_microservice.core.ports.EventNotificationPort;
 import com.Samuel.event_microservice.core.ports.EventRepositoryPort;
 import com.Samuel.event_microservice.core.ports.SubscriptionRepositoryPort;
 import com.Samuel.event_microservice.core.usecases.EventUseCase;
-import com.Samuel.event_microservice.infrastructure.dto.EmailRequestDTO;
 import com.Samuel.event_microservice.infrastructure.dto.PageResponseDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventRequestDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventResponseDTO;
@@ -40,7 +40,7 @@ public class EventService implements EventUseCase {
 
     private final EventRepositoryPort eventRepository;
     private final SubscriptionRepositoryPort subscriptionRepository;
-    private final EmailSender emailSender;
+    private final EventNotificationPort eventNotificationPort;
 
     /**
      * {@inheritDoc}
@@ -109,10 +109,46 @@ public class EventService implements EventUseCase {
     /**
      * {@inheritDoc}
      * <p>
-     * Esta implementação é transacional. Ela verifica a existência do evento e da inscrição,
-     * atualiza o contador de participantes e salva a nova inscrição. Após o sucesso da
-     * transação, tenta enviar um e-mail de confirmação. Uma falha no envio do e-mail
-     * não reverte a inscrição.
+     * Este método implementa a lógica de cancelamento (Soft Delete).
+     * Ele verifica se o evento existe, se já ocorreu ou se já está cancelado antes de alterar o status.
+     */
+    @Override
+    @Transactional
+    public void cancelEvent(UUID eventId) {
+        logger.info("Attempting to cancel event with ID: {}", eventId);
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> {
+                    logger.warn("Cancellation failed: Event with ID {} not found.", eventId);
+                    return new EventNotFoundException("Evento com ID " + eventId + " não encontrado.");
+                });
+
+        if (event.getEndDateTime().isBefore(LocalDateTime.now())) {
+            logger.warn("Cancellation failed: Event with ID {} has already finished.", eventId);
+            throw new IllegalArgumentException("Não é possível cancelar um evento que já ocorreu.");
+        }
+
+        if (event.getStatus() == EventStatus.CANCELLED) {
+            logger.warn("Cancellation failed: Event with ID {} is already cancelled.", eventId);
+            throw new IllegalArgumentException("Este evento já está cancelado.");
+        }
+
+        event.cancel();
+        eventRepository.save(event);
+        logger.info("Event with ID {} cancelled successfully.", eventId);
+
+        try {
+            eventNotificationPort.notifyParticipantsOfCancellation(event);
+        } catch (Exception e) {
+            logger.error("Failed to send cancellation notifications for event {}: {}", eventId, e.getMessage());
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Esta implementação é transacional. Ela verifica a existência do evento, se ele está ativo,
+     * se a inscrição já existe e se há vagas disponíveis.
+     * Após o sucesso da transação, tenta enviar um e-mail de confirmação.
      */
     @Override
     @Transactional
@@ -125,6 +161,11 @@ public class EventService implements EventUseCase {
                     logger.warn("Registration failed: Event with ID {} not found.", eventId);
                     return new EventNotFoundException("Evento com ID " + eventId + " não encontrado.");
                 });
+        
+        if (event.getStatus() != EventStatus.ACTIVE) {
+            logger.warn("Registration failed: Event with ID {} is not active.", eventId);
+            throw new IllegalArgumentException("Não é possível se inscrever em um evento que não está ativo.");
+        }
 
         subscriptionRepository.findByEventAndParticipantEmail(event, participantEmail)
                 .ifPresent(subscription -> {
@@ -145,16 +186,9 @@ public class EventService implements EventUseCase {
         logger.info("Participant {} registered successfully for event {}.", participantEmail, eventId);
 
         try {
-            logger.info("Sending confirmation email to {}.", participantEmail);
-            EmailRequestDTO emailRequest = new EmailRequestDTO(
-                    participantEmail,
-                    "Inscrição Confirmada: " + event.getTitle(),
-                    "Sua inscrição no evento '" + event.getTitle() + "' foi confirmada com sucesso!"
-            );
-            emailSender.sendEmail(emailRequest);
-            logger.info("Confirmation email sent successfully to {}.", participantEmail);
+            eventNotificationPort.sendRegistrationConfirmation(event, participantEmail);
         } catch (Exception e) {
-            logger.error("Failed to send confirmation email to {} for event {}: {}", participantEmail, eventId, e.getMessage());
+            logger.error("Failed to send registration confirmation email to {} for event {}: {}", participantEmail, eventId, e.getMessage());
         }
     }
 
