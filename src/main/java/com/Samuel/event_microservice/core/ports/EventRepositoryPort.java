@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -65,4 +66,12 @@ public interface EventRepositoryPort {
      * @return Uma página de eventos futuros.
      */
     Page<Event> findUpcomingEvents(LocalDateTime currentDate, Pageable pageable);
+
+    /**
+     * Busca todos os eventos que estão com status ATIVO e cuja data de término já passou.
+     *
+     * @param now A data e hora atual, para comparação.
+     * @return Uma lista de eventos ativos que já terminaram.
+     */
+    List<Event> findActiveEventsFinishedBefore(LocalDateTime now);
 }

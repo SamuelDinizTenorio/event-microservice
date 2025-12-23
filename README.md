@@ -16,6 +16,8 @@ O projeto foi construído seguindo princípios de **Arquitetura Limpa (Hexagonal
 - Busca de detalhes de um evento específico.
 - Registro de participantes em um evento.
 - Listagem paginada de participantes de um evento.
+- Cancelamento de eventos (Soft Delete).
+- Atualização automática do status de eventos para "finalizado".
 - Tratamento de erro padronizado para toda a API.
 
 ---
@@ -29,6 +31,7 @@ O projeto foi construído seguindo princípios de **Arquitetura Limpa (Hexagonal
 - **Flyway**: Para gerenciamento de migrações do banco de dados.
 - **Spring Cloud OpenFeign**: Para comunicação com outros microsserviços.
 - **Spring Boot Actuator**: Para health checks.
+- **Spring Scheduler**: Para execução de tarefas agendadas.
 - **Maven**: Para gerenciamento de dependências e build.
 - **Docker & Docker Compose**: Para containerização do ambiente de desenvolvimento.
 - **Testcontainers**: Para testes de integração com um banco de dados real.
@@ -104,8 +107,19 @@ Esta abordagem é ideal para desenvolvimento e depuração.
     - Abra o projeto na sua IDE (IntelliJ, VS Code, etc.).
     - Certifique-se de que a IDE carregou as dependências do Maven.
     - Encontre a classe `EventMicroserviceApplication.java` e execute o método `main`.
-    - A aplicação irá iniciar e se conectar ao banco de dados que está rodando no container Docker.
-    
+
+---
+
+## ⚙️ Processos Automáticos
+
+### Atualização de Status de Eventos
+
+O sistema possui uma tarefa agendada (`EventStatusUpdaterService`) que roda a cada hora para manter a consistência dos dados.
+
+- **Funcionalidade:** A tarefa busca por todos os eventos que estão com o status `ACTIVE` mas cuja data de término (`endDateTime`) já passou.
+- **Ação:** Para cada um desses eventos, o status é atualizado para `FINISHED`.
+- **Propósito:** Isso garante que o estado dos eventos no banco de dados reflita a realidade sem a necessidade de intervenção manual ou de um endpoint específico para "finalizar" um evento.
+
 ---
 
 ## 🧪 Testes

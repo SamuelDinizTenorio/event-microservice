@@ -89,6 +89,9 @@ public class Event {
      * @throws EventFullException se o evento já atingiu a sua capacidade máxima.
      */
     public void registerParticipant() {
+        if (this.status != EventStatus.ACTIVE) {
+            throw new IllegalStateException("Não é possível se inscrever em um evento que não está ativo.");
+        }
         if (this.registeredParticipants >= this.maxParticipants) {
             throw new EventFullException();
         }
@@ -96,10 +99,31 @@ public class Event {
     }
 
     /**
-     * Cancela o evento, alterando seu status.
+     * Cancela o evento, alterando o seu status, se as regras de negócio permitirem.
+     * @throws IllegalStateException se o evento já ocorreu ou já está cancelado.
      */
     public void cancel() {
+        if (this.endDateTime.isBefore(LocalDateTime.now())) {
+            throw new IllegalStateException("Não é possível cancelar um evento que já ocorreu.");
+        }
+        if (this.status == EventStatus.CANCELLED) {
+            throw new IllegalStateException("Este evento já está cancelado.");
+        }
         this.status = EventStatus.CANCELLED;
+    }
+
+    /**
+     * Finaliza o evento, alterando o seu status, se as regras de negócio permitirem.
+     * @throws IllegalStateException se o evento ainda não ocorreu ou não está ativo.
+     */
+    public void finish() {
+        if (this.status != EventStatus.ACTIVE) {
+            throw new IllegalStateException("Apenas eventos ativos podem ser finalizados.");
+        }
+        if (this.endDateTime.isAfter(LocalDateTime.now())) {
+            throw new IllegalStateException("Não é possível finalizar um evento que ainda não terminou.");
+        }
+        this.status = EventStatus.FINISHED;
     }
 
     @Override

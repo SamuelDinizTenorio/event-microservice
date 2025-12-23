@@ -17,6 +17,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -58,7 +59,7 @@ class JpaEventRepositoryTest {
         Event pastEvent = Event.builder().title("Evento Passado").startDateTime(now.minusDays(2)).endDateTime(now.minusDays(1)).status(EventStatus.ACTIVE).build();
         entityManager.persist(pastEvent);
 
-        // Cenário 3: Evento futuro mas cancelado (NÃO deve ser encontrado)
+        // Cenário 3: Evento futuro, mas cancelado (NÃO deve ser encontrado)
         Event upcomingCancelledEvent = Event.builder().title("Evento Futuro Cancelado").startDateTime(now.plusDays(3)).endDateTime(now.plusDays(4)).status(EventStatus.CANCELLED).build();
         entityManager.persist(upcomingCancelledEvent);
 
@@ -94,5 +95,49 @@ class JpaEventRepositoryTest {
         // Assert
         assertEquals(1, resultPage.getTotalElements());
         assertEquals("Evento Ativo", resultPage.getContent().getFirst().getTitle());
+    }
+
+    @Test
+    @DisplayName("findActiveEventsFinishedBefore should return only active events that have ended")
+    void findActiveEventsFinishedBefore_shouldReturnOnlyActiveAndFinishedEvents() {
+        // Arrange
+        LocalDateTime now = LocalDateTime.now();
+
+        // Cenário 1: Evento ativo que já terminou (DEVE ser encontrado)
+        Event activeAndFinished = Event.builder()
+                .title("Active and Finished")
+                .startDateTime(now.minusDays(2))
+                .endDateTime(now.minusDays(1))
+                .status(EventStatus.ACTIVE)
+                .build();
+        entityManager.persist(activeAndFinished);
+
+        // Cenário 2: Evento ativo que ainda não terminou (NÃO deve ser encontrado)
+        Event activeAndUpcoming = Event.builder()
+                .title("Active and Upcoming")
+                .startDateTime(now.plusDays(1))
+                .endDateTime(now.plusDays(2))
+                .status(EventStatus.ACTIVE)
+                .build();
+        entityManager.persist(activeAndUpcoming);
+
+        // Cenário 3: Evento cancelado que já terminou (NÃO deve ser encontrado)
+        Event cancelledAndFinished = Event.builder()
+                .title("Cancelled and Finished")
+                .startDateTime(now.minusDays(3))
+                .endDateTime(now.minusDays(2))
+                .status(EventStatus.CANCELLED)
+                .build();
+        entityManager.persist(cancelledAndFinished);
+
+        entityManager.flush();
+
+        // Act
+        List<Event> results = jpaEventRepository.findActiveEventsFinishedBefore(now);
+
+        // Assert
+        assertEquals(1, results.size());
+        assertEquals("Active and Finished", results.getFirst().getTitle());
+        assertEquals(EventStatus.ACTIVE, results.getFirst().getStatus());
     }
 }

@@ -1,9 +1,7 @@
 package com.Samuel.event_microservice.infrastructure.application;
 
 import com.Samuel.event_microservice.core.models.Event;
-import com.Samuel.event_microservice.core.models.EventStatus;
 import com.Samuel.event_microservice.core.models.Subscription;
-import com.Samuel.event_microservice.core.exceptions.EventFullException;
 import com.Samuel.event_microservice.core.exceptions.EventNotFoundException;
 import com.Samuel.event_microservice.core.exceptions.SubscriptionAlreadyExistsException;
 import com.Samuel.event_microservice.core.ports.EventNotificationPort;
@@ -122,17 +120,8 @@ public class EventService implements EventUseCase {
                     return new EventNotFoundException("Evento com ID " + eventId + " não encontrado.");
                 });
 
-        if (event.getEndDateTime().isBefore(LocalDateTime.now())) {
-            logger.warn("Cancellation failed: Event with ID {} has already finished.", eventId);
-            throw new IllegalArgumentException("Não é possível cancelar um evento que já ocorreu.");
-        }
-
-        if (event.getStatus() == EventStatus.CANCELLED) {
-            logger.warn("Cancellation failed: Event with ID {} is already cancelled.", eventId);
-            throw new IllegalArgumentException("Este evento já está cancelado.");
-        }
-
         event.cancel();
+        
         eventRepository.save(event);
         logger.info("Event with ID {} cancelled successfully.", eventId);
 
@@ -162,23 +151,13 @@ public class EventService implements EventUseCase {
                     return new EventNotFoundException("Evento com ID " + eventId + " não encontrado.");
                 });
         
-        if (event.getStatus() != EventStatus.ACTIVE) {
-            logger.warn("Registration failed: Event with ID {} is not active.", eventId);
-            throw new IllegalArgumentException("Não é possível se inscrever em um evento que não está ativo.");
-        }
-
         subscriptionRepository.findByEventAndParticipantEmail(event, participantEmail)
                 .ifPresent(subscription -> {
                     logger.warn("Participant {} is already subscribed to event {}.", participantEmail, eventId);
                     throw new SubscriptionAlreadyExistsException("Este participante já está inscrito neste evento.");
                 });
 
-        try {
-            event.registerParticipant();
-        } catch (EventFullException e) {
-            logger.warn("Registration failed: Event {} is full.", eventId);
-            throw e;
-        }
+        event.registerParticipant();
 
         Subscription newSubscription = new Subscription(event, participantEmail);
         subscriptionRepository.save(newSubscription);

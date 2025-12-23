@@ -51,16 +51,7 @@ class EventServiceTest {
 
     // Método auxiliar para criar uma entidade Event
     private Event createEventEntity(String title, LocalDateTime start, LocalDateTime end, int maxParticipants) {
-        return new Event(
-                title,
-                "Descrição",
-                start,
-                end,
-                maxParticipants,
-                "http://image.url",
-                "http://event.url",
-                null,
-                true);
+        return new Event(title, "Descrição", start, end, maxParticipants, "http://image.url", "http://event.url", null, true);
     }
 
     @Test
@@ -83,7 +74,7 @@ class EventServiceTest {
         );
 
         Event newEvent = createEventEntity("Evento Válido", start, end, 100);
-        
+
         when(eventRepository.save(any(Event.class))).thenReturn(newEvent);
 
         // Act
@@ -172,6 +163,59 @@ class EventServiceTest {
     }
 
     @Test
+    @DisplayName("Should cancel an event and notify participants")
+    void cancelEvent_withValidEvent_shouldCancelAndNotify() {
+        // Arrange
+        UUID eventId = UUID.randomUUID();
+        LocalDateTime start = LocalDateTime.now().plusDays(1);
+        Event event = createEventEntity("Evento para Cancelar", start, start.plusHours(1), 10);
+
+        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
+        doNothing().when(eventNotificationAdapter).notifyParticipantsOfCancellation(any(Event.class));
+
+        // Act
+        eventService.cancelEvent(eventId);
+
+        // Assert
+        assertEquals(EventStatus.CANCELLED, event.getStatus());
+        verify(eventRepository, times(1)).save(event);
+        verify(eventNotificationAdapter, times(1)).notifyParticipantsOfCancellation(event);
+    }
+
+    @Test
+    @DisplayName("Should propagate exception when entity validation fails on cancel")
+    void cancelEvent_whenEntityThrowsException_shouldPropagateException() {
+        // Arrange
+        UUID eventId = UUID.randomUUID();
+        Event alreadyCancelledEvent = createEventEntity("Event", LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(2), 10);
+        alreadyCancelledEvent.cancel();
+        when(eventRepository.findById(eventId)).thenReturn(Optional.of(alreadyCancelledEvent));
+
+        // Act & Assert
+        assertThrows(IllegalStateException.class, () -> eventService.cancelEvent(eventId));
+
+        verify(eventRepository, never()).save(any(Event.class)); // Garante que o save não foi chamado
+    }
+
+    @Test
+    @DisplayName("Should throw exception when cancelling an already finished event")
+    void cancelEvent_whenEventHasAlreadyFinished_shouldThrowException() {
+        // Arrange
+        UUID eventId = UUID.randomUUID();
+        Event finishedEvent = Event.builder().title("Finished Event").startDateTime(LocalDateTime.now().minusHours(2)).endDateTime(LocalDateTime.now().minusHours(1)).status(EventStatus.ACTIVE).build();
+
+        when(eventRepository.findById(eventId)).thenReturn(Optional.of(finishedEvent));
+
+        // Act & Assert
+        // Verifica se a exceção correta, vinda da entidade, é propagada pelo serviço
+        assertThrows(IllegalStateException.class, () -> eventService.cancelEvent(eventId));
+
+        // Garante que, como a operação falhou, nenhuma ação de salvamento ou notificação ocorreu
+        verify(eventRepository, never()).save(any(Event.class));
+        verify(eventNotificationAdapter, never()).notifyParticipantsOfCancellation(any(Event.class));
+    }
+
+    @Test
     @DisplayName("Should register participant successfully and send confirmation email")
     void registerParticipant_withValidData_shouldSucceedAndNotify() {
         // Arrange
@@ -224,21 +268,37 @@ class EventServiceTest {
     }
 
     @Test
-    @DisplayName("Should throw EventFullException when trying to register for a full event")
-    void registerParticipant_whenEventIsFull_shouldThrowEventFullException() {
+    @DisplayName("Should throw EventFullException when entity throws it")
+    void registerParticipant_whenEntityThrowsEventFull_shouldPropagateException() {
         // Arrange
         UUID eventId = UUID.randomUUID();
-        LocalDateTime start = LocalDateTime.now().plusDays(1);
-        Event fullEvent = createEventEntity("Evento Lotado", start, start.plusHours(1), 1);
-        fullEvent.registerParticipant(); // Lota o evento (registeredParticipants = 1)
+        SubscriptionRequestDTO subscriptionDTO = new SubscriptionRequestDTO("test@example.com");
 
-        SubscriptionRequestDTO subscriptionDTO = new SubscriptionRequestDTO("new@example.com");
+        // Cria um evento lotado usando o Builder.
+        Event fullEvent = Event.builder().title("Full Event").startDateTime(LocalDateTime.now().plusDays(1)).endDateTime(LocalDateTime.now().plusDays(2)).maxParticipants(100).registeredParticipants(100).status(EventStatus.ACTIVE).build();
 
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(fullEvent));
-        when(subscriptionRepository.findByEventAndParticipantEmail(fullEvent, "new@example.com")).thenReturn(Optional.empty());
+        when(subscriptionRepository.findByEventAndParticipantEmail(fullEvent, "test@example.com")).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThrows(EventFullException.class, () -> eventService.registerParticipant(eventId, subscriptionDTO));
+    }
+
+    @Test
+    @DisplayName("Should throw exception when trying to register for an inactive event")
+    void registerParticipant_forInactiveEvent_shouldThrowException() {
+        // Arrange
+        UUID eventId = UUID.randomUUID();
+        LocalDateTime start = LocalDateTime.now().plusDays(1);
+
+        // Cria um evento cancelado.
+        Event cancelledEvent = Event.builder().title("Evento Cancelado").startDateTime(start).endDateTime(start.plusHours(1)).status(EventStatus.CANCELLED).build();
+        SubscriptionRequestDTO subscriptionDTO = new SubscriptionRequestDTO("test@example.com");
+
+        when(eventRepository.findById(eventId)).thenReturn(Optional.of(cancelledEvent));
+
+        // Act & Assert
+        assertThrows(IllegalStateException.class, () -> eventService.registerParticipant(eventId, subscriptionDTO));
     }
 
     @Test
@@ -252,7 +312,7 @@ class EventServiceTest {
 
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
         when(subscriptionRepository.findByEventAndParticipantEmail(event, "test@example.com")).thenReturn(Optional.empty());
-        
+
         // Simula falha no serviço de notificação
         doThrow(new RuntimeException("Email service is down")).when(eventNotificationAdapter).sendRegistrationConfirmation(any(Event.class), anyString());
 
@@ -302,43 +362,5 @@ class EventServiceTest {
         // Act & Assert
         assertThrows(EventNotFoundException.class, () -> eventService.getRegisteredParticipants(invalidEventId, pageable));
         verify(subscriptionRepository, never()).findByEvent(any(), any());
-    }
-
-    @Test
-    @DisplayName("Should cancel an event and notify participants")
-    void cancelEvent_withValidEvent_shouldCancelAndNotify() {
-        // Arrange
-        UUID eventId = UUID.randomUUID();
-        LocalDateTime start = LocalDateTime.now().plusDays(1);
-        Event event = createEventEntity("Evento para Cancelar", start, start.plusHours(1), 10);
-
-        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-        doNothing().when(eventNotificationAdapter).notifyParticipantsOfCancellation(any(Event.class));
-
-        // Act
-        eventService.cancelEvent(eventId);
-
-        // Assert
-        assertEquals(EventStatus.CANCELLED, event.getStatus());
-        verify(eventRepository, times(1)).save(event);
-        verify(eventNotificationAdapter, times(1)).notifyParticipantsOfCancellation(event);
-    }
-
-    @Test
-    @DisplayName("Should throw exception when trying to register for an inactive event")
-    void registerParticipant_forInactiveEvent_shouldThrowException() {
-        // Arrange
-        UUID eventId = UUID.randomUUID();
-        LocalDateTime start = LocalDateTime.now().plusDays(1);
-        Event cancelledEvent = createEventEntity("Evento Cancelado", start, start.plusHours(1), 10);
-        cancelledEvent.cancel(); // Cancela o evento
-        SubscriptionRequestDTO subscriptionDTO = new SubscriptionRequestDTO("test@example.com");
-
-        when(eventRepository.findById(eventId)).thenReturn(Optional.of(cancelledEvent));
-
-        // Act & Assert
-        assertThrows(IllegalArgumentException.class, () -> {
-            eventService.registerParticipant(eventId, subscriptionDTO);
-        });
     }
 }

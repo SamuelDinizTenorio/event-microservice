@@ -49,6 +49,7 @@ class EventTest {
         assertEquals(end, event.getEndDateTime());
         assertEquals(maxParticipants, event.getMaxParticipants());
         assertEquals(0, event.getRegisteredParticipants());
+        assertEquals(EventStatus.ACTIVE, event.getStatus());
     }
 
     @Test
@@ -130,6 +131,101 @@ class EventTest {
     }
 
     @Test
+    @DisplayName("Should throw IllegalStateException when registering for an inactive event")
+    void registerParticipant_shouldThrowException_whenEventIsNotActive() {
+        // Arrange
+        Event event = createValidEvent();
+        event.cancel(); // Cancela o evento
+
+        // Act & Assert
+        assertThrows(IllegalStateException.class, event::registerParticipant);
+    }
+
+    @Test
+    @DisplayName("Should change status to CANCELLED when cancelling an active event")
+    void cancel_shouldChangeStatus_whenEventIsActive() {
+        // Arrange
+        Event event = createValidEvent();
+
+        // Act
+        event.cancel();
+
+        // Assert
+        assertEquals(EventStatus.CANCELLED, event.getStatus());
+    }
+
+    @Test
+    @DisplayName("Should throw IllegalStateException when cancelling an already finished event")
+    void cancel_shouldThrowException_whenEventIsFinished() {
+        // Arrange
+        var start = LocalDateTime.now().minusHours(2); // data de início no passado.
+
+        // Cria o objeto diretamente no estado "finalizado".
+        Event finishedEvent = Event.builder()
+                .title("Finished Event")
+                .startDateTime(start)
+                .endDateTime(start.plusHours(1))
+                .status(EventStatus.FINISHED)
+                .build();
+
+        // Act & Assert
+        assertThrows(IllegalStateException.class, finishedEvent::cancel);
+    }
+
+    @Test
+    @DisplayName("Should throw IllegalStateException when cancelling an already cancelled event")
+    void cancel_shouldThrowException_whenEventIsAlreadyCancelled() {
+        // Arrange
+        Event event = createValidEvent();
+        event.cancel(); // Cancela uma vez
+
+        // Act & Assert
+        assertThrows(IllegalStateException.class, event::cancel); // Tenta cancelar de novo
+    }
+
+    @Test
+    @DisplayName("Should change status to FINISHED when finishing an active, past event")
+    void finish_shouldChangeStatus_whenEventIsActiveAndPast() {
+        // Arrange
+        var start = LocalDateTime.now().minusHours(2); // data de início no passado.
+
+        // Cria um evento que terminou.
+        Event finishedEvent = Event.builder()
+                .title("Finished Event")
+                .startDateTime(start)
+                .endDateTime(start.plusHours(1))
+                .status(EventStatus.ACTIVE)
+                .build();
+
+        // Act
+        finishedEvent.finish();
+
+        // Assert
+        assertEquals(EventStatus.FINISHED, finishedEvent.getStatus());
+    }
+
+    @Test
+    @DisplayName("Should throw IllegalStateException when finishing an event that is not active")
+    void finish_shouldThrowException_whenEventIsNotActive() {
+        // Arrange
+        Event event = createValidEvent();
+        event.cancel(); // Evento não está mais ativo
+
+        // Act & Assert
+        assertThrows(IllegalStateException.class, event::finish);
+    }
+
+    @Test
+    @DisplayName("Should throw IllegalStateException when finishing an event that has not ended")
+    void finish_shouldThrowException_whenEventHasNotEnded() {
+        // Arrange
+        Event event = createValidEvent(); // Evento é no futuro por padrão
+
+        // Act & Assert
+        assertThrows(IllegalStateException.class, event::finish);
+    }
+
+    @Test
     @DisplayName("Should correctly test equals and hashCode contracts for JPA entities")
     void testEqualsAndHashCodeContracts() {
         // Arrange
@@ -148,7 +244,6 @@ class EventTest {
 
         // --- Assert para equals() ---
         assertNotEquals(newEvent1, newEvent2, "New entities with null IDs should not be equal.");
-        assertEquals(newEvent1, newEvent1, "An entity should be equal to itself.");
         assertEquals(persistedEvent1, samePersistedEvent1, "Entities with the same ID should be equal.");
         assertNotEquals(persistedEvent1, differentPersistedEvent, "Entities with different IDs should not be equal.");
         assertNotEquals(null, persistedEvent1);

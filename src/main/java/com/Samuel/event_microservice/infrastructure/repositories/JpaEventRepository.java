@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -33,4 +34,11 @@ public interface JpaEventRepository extends JpaRepository<Event, UUID>, EventRep
     @Override
     @Query("SELECT e FROM event e WHERE e.startDateTime > :currentDate AND e.status = com.Samuel.event_microservice.core.models.EventStatus.ACTIVE")
     Page<Event> findUpcomingEvents(@Param("currentDate") LocalDateTime currentDate, Pageable pageable);
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Query("SELECT e FROM event e WHERE e.status = com.Samuel.event_microservice.core.models.EventStatus.ACTIVE AND e.endDateTime < :now")
+    List<Event> findActiveEventsFinishedBefore(@Param("now") LocalDateTime now);
 }
