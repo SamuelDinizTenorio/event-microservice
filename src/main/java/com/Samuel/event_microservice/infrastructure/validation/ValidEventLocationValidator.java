@@ -32,7 +32,7 @@ public class ValidEventLocationValidator implements ConstraintValidator<ValidEve
             return true; // A validação de nulidade do objeto principal é tratada por @NotNull.
         }
 
-        boolean isRemote = event.isRemote();
+        boolean isRemote = event.is_remote();
         boolean hasEventUrl = event.eventUrl() != null && !event.eventUrl().isBlank();
         boolean hasLocation = event.location() != null && !event.location().isBlank();
 

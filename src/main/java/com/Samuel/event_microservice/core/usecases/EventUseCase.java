@@ -3,6 +3,7 @@ package com.Samuel.event_microservice.core.usecases;
 import com.Samuel.event_microservice.infrastructure.dto.PageResponseDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventRequestDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventResponseDTO;
+import com.Samuel.event_microservice.infrastructure.dto.event.EventUpdateDTO;
 import com.Samuel.event_microservice.infrastructure.dto.subscription.RegisteredParticipantDTO;
 import com.Samuel.event_microservice.infrastructure.dto.subscription.SubscriptionRequestDTO;
 import com.Samuel.event_microservice.core.exceptions.EventFullException;
@@ -78,4 +79,13 @@ public interface EventUseCase {
      * @throws EventNotFoundException se o evento com o ID fornecido não for encontrado.
      */
     PageResponseDTO<RegisteredParticipantDTO> getRegisteredParticipants(UUID eventId, Pageable pageable);
+
+    /**
+     * Atualiza parcialmente um evento existente.
+     *
+     * @param eventId O UUID do evento a ser atualizado.
+     * @param eventUpdateDTO DTO com os dados a serem alterados.
+     * @return Um DTO com os detalhes do evento atualizado.
+     */
+    EventResponseDTO updateEvent(UUID eventId, EventUpdateDTO eventUpdateDTO);
 }

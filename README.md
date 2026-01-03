@@ -10,15 +10,16 @@ O projeto foi construído seguindo princípios de **Arquitetura Limpa (Hexagonal
 
 ## ✨ Features
 
-- Criação de novos eventos com validação de dados.
+- Criação de novos eventos com validação de dados robusta.
+- **Atualização parcial** de eventos existentes.
 - Listagem paginada de todos os eventos.
 - Listagem paginada de eventos futuros.
 - Busca de detalhes de um evento específico.
-- Registro de participantes em um evento.
+- Registro de participantes em um evento com validação de vagas e status.
 - Listagem paginada de participantes de um evento.
-- Cancelamento de eventos (Soft Delete).
+- Cancelamento de eventos (Soft Delete) com validação de estado.
 - Atualização automática do status de eventos para "finalizado".
-- Tratamento de erro padronizado para toda a API.
+- Tratamento de erro padronizado para toda a API, com mensagens claras.
 
 ---
 
@@ -153,10 +154,12 @@ A arquitetura do projeto permite a troca do banco de dados. Para isso, você pre
 
 ## 📋 Endpoints da API
 
+A API retorna respostas de erro padronizadas em caso de falha (ex: 400, 404, 409) com uma mensagem clara no corpo da resposta.
+
 ### Eventos
 
 #### `GET /events`
-Lista todos os eventos ativos de forma paginada.
+Lista todos os eventos de forma paginada.
 - **Parâmetros (Query):** `page`, `size`, `sort`.
 - **Resposta (`200 OK`):**
   ```json
@@ -173,7 +176,8 @@ Lista todos os eventos ativos de forma paginada.
         "imageUrl": "http://...",
         "eventUrl": "http://...",
         "location": "São Paulo, SP",
-        "isRemote": false
+        "isRemote": false,
+        "status": "ACTIVE"
       }
     ],
     "page": 0,
@@ -205,19 +209,21 @@ Obtém os detalhes completos de um evento específico.
     "imageUrl": "http://...",
     "eventUrl": "http://...",
     "location": "São Paulo, SP",
-    "isRemote": false
+    "isRemote": false,
+    "status": "ACTIVE"
   }
   ```
 
 #### `POST /events`
 Cria um novo evento.
+- **Validações:** A API valida regras como `título` e `descrição` não estarem em branco, datas serem no futuro, e consistência entre localização e tipo de evento (remoto/presencial).
 - **Corpo (JSON):**
   ```json
   {
     "title": "Tech Conference 2024",
-    "description": "Um evento sobre tecnologia.",
-    "startDateTime": "2024-12-25T14:00:00",
-    "endDateTime": "2024-12-25T16:00:00",
+    "description": "Uma descrição com pelo menos 10 caracteres.",
+    "startDateTime": "2025-10-20T14:00:00",
+    "endDateTime": "2025-10-20T16:00:00",
     "maxParticipants": 100,
     "imageUrl": "http://...",
     "eventUrl": "http://...",
@@ -227,8 +233,20 @@ Cria um novo evento.
   ```
 - **Resposta (`201 Created`):** Mesma estrutura de `GET /events/{id}`.
 
+#### `PATCH /events/{id}`
+Atualiza parcialmente um evento existente. Apenas os campos fornecidos no corpo da requisição serão alterados.
+- **Parâmetros (Path):** `id` (UUID).
+- **Corpo (JSON - Exemplo):**
+  ```json
+  {
+    "title": "Novo Título do Evento",
+    "maxParticipants": 150
+  }
+  ```
+- **Resposta (`200 OK`):** Retorna o objeto completo do evento com os dados atualizados.
+
 #### `POST /events/{id}/cancel`
-Cancela um evento (Soft Delete), alterando seu status para `CANCELLED`.
+Cancela um evento (Soft Delete), alterando seu status para `CANCELLED`. A operação falhará se o evento já ocorreu ou já foi cancelado.
 - **Parâmetros (Path):** `id` (UUID).
 - **Corpo:** Vazio.
 - **Resposta (`200 OK`):**
@@ -241,7 +259,7 @@ Cancela um evento (Soft Delete), alterando seu status para `CANCELLED`.
 ### Inscrições
 
 #### `POST /events/{eventId}/register`
-Registra um participante em um evento.
+Registra um participante em um evento. A operação falhará se o evento não estiver ativo, se já estiver lotado, ou se o participante já estiver inscrito.
 - **Parâmetros (Path):** `eventId` (UUID).
 - **Corpo (JSON):**
   ```json

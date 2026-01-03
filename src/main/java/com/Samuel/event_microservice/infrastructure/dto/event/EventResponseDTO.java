@@ -1,6 +1,7 @@
 package com.Samuel.event_microservice.infrastructure.dto.event;
 
 import com.Samuel.event_microservice.core.models.Event;
+import com.Samuel.event_microservice.core.models.EventStatus;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -19,7 +20,8 @@ import java.util.UUID;
  * @param imageUrl             A URL de uma imagem de banner para o evento.
  * @param eventUrl             A URL para acessar o evento, caso seja remoto.
  * @param location             O endereço físico do evento, caso seja presencial.
- * @param isRemote             Indica se o evento é remoto (online) ou não.
+ * @param is_remote               Indica se o evento é remoto (online) ou não.
+ * @param status               O status atual do evento (ex: ACTIVE, CANCELLED).
  */
 public record EventResponseDTO(
         UUID id,
@@ -32,7 +34,8 @@ public record EventResponseDTO(
         String imageUrl,
         String eventUrl,
         String location,
-        Boolean isRemote
+        boolean is_remote,
+        EventStatus status
 ) {
     /**
      * Construtor que cria um EventResponseDTO a partir de uma entidade Event.
@@ -51,7 +54,8 @@ public record EventResponseDTO(
                 event.getImageUrl(),
                 event.getEventUrl(),
                 event.getLocation(),
-                event.getIsRemote()
+                event.isRemote(),
+                event.getStatus()
         );
     }
 }

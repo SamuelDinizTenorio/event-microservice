@@ -29,8 +29,10 @@ class ValidationUtilsTest {
         String testProperty = "testProperty";
 
         // Configura o comportamento encadeado dos mocks
-        when(context.buildConstraintViolationWithTemplate(testMessage)).thenReturn(builder);
-        when(builder.addPropertyNode(testProperty)).thenReturn(nodeBuilder);
+        when(context.buildConstraintViolationWithTemplate(testMessage))
+                .thenReturn(builder);
+        when(builder.addPropertyNode(testProperty))
+                .thenReturn(nodeBuilder);
 
         // Act
         ValidationUtils.reportViolation(context, testMessage, testProperty);

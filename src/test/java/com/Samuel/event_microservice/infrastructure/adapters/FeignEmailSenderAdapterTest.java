@@ -5,11 +5,12 @@ import com.Samuel.event_microservice.infrastructure.dto.EmailRequestDTO;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.mockito.Mockito.times;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -22,17 +23,26 @@ class FeignEmailSenderAdapterTest {
     private EmailServiceClient emailServiceClient;
 
     @Test
-    @DisplayName("Should call the Feign client when sendEmail is invoked")
-    void sendEmail_shouldCallFeignClient() {
+    @DisplayName("Should call Feign client with the correct email data")
+    void sendEmail_shouldCallFeignClientWithCorrectData() {
         // Arrange
-        EmailRequestDTO emailRequest = new EmailRequestDTO("test@example.com", "Assunto", "Corpo do e-mail");
+        EmailRequestDTO originalEmailRequest = new EmailRequestDTO("test@example.com", "Assunto", "Corpo do e-mail");
+        ArgumentCaptor<EmailRequestDTO> emailCaptor = ArgumentCaptor.forClass(EmailRequestDTO.class);
 
         // Act
-        feignEmailSenderAdapter.sendEmail(emailRequest);
+        feignEmailSenderAdapter.sendEmail(originalEmailRequest);
 
         // Assert
-        // Verifica se o método sendEmail do cliente Feign foi chamado exatamente uma vez
-        // com o objeto de requisição de e-mail correto.
-        verify(emailServiceClient, times(1)).sendEmail(emailRequest);
+        // 1. Verifica se o método do cliente Feign foi chamado uma vez e captura o argumento
+        verify(emailServiceClient).sendEmail(emailCaptor.capture());
+
+        // 2. Pega o DTO que foi capturado
+        EmailRequestDTO capturedEmail = emailCaptor.getValue();
+
+        // 3. Usa AssertJ para verificar o conteúdo do DTO capturado
+        assertThat(capturedEmail).isNotNull();
+        assertThat(capturedEmail.to()).isEqualTo(originalEmailRequest.to());
+        assertThat(capturedEmail.subject()).isEqualTo(originalEmailRequest.subject());
+        assertThat(capturedEmail.body()).isEqualTo(originalEmailRequest.body());
     }
 }

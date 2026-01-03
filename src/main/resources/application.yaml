@@ -17,6 +17,12 @@ clients:
   email-service:
     url: ${EMAIL_SERVICE_URL:http://localhost:8081}
 
+# Configurações de negócio da aplicação
+app:
+  business:
+    event:
+      min-duration-minutes: ${EVENT_MIN_DURATION_MINUTES:15}
+
 spring:
   application:
     name: event-microservice
@@ -31,8 +37,6 @@ spring:
         default-page-size: 10
         max-page-size: 100
   datasource:
-    # Valores padrão para desenvolvimento local (fora do Docker).
-    # Serão sobrescritos pelas variáveis de ambiente no Docker Compose.
     url: jdbc:postgresql://localhost:${DB_PORT:5432}/events-db
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:postgres}

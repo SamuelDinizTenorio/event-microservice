@@ -1,21 +1,21 @@
 package com.Samuel.event_microservice.core.models;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
  * Representa a entidade Subscription (inscrição) no banco de dados.
- * Registra a participação de um usuário em um evento.
+ * Registra a participação de um usuário num evento.
  */
 @Entity(name = "subscription")
 @Table(name = "subscription")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PRIVATE, force = true)
+@AllArgsConstructor // Necessário para o @Builder
+@Builder // Adicionado para facilitar a criação de objetos em testes
 public class Subscription {
 
     @Id

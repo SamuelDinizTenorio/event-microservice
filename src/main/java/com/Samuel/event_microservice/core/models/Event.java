@@ -1,5 +1,6 @@
 package com.Samuel.event_microservice.core.models;
 
+import com.Samuel.event_microservice.core.data.EventUpdateData;
 import com.Samuel.event_microservice.core.exceptions.EventFullException;
 import jakarta.persistence.*;
 import lombok.*;
@@ -10,7 +11,6 @@ import java.util.UUID;
 
 /**
  * Representa a entidade Event no banco de dados.
- * Contém todas as informações sobre um evento específico.
  */
 @Entity(name = "event")
 @Table(name = "event")
@@ -33,7 +33,7 @@ public class Event {
     private String imageUrl; // A URL de uma imagem de banner para o evento.
     private String eventUrl; // A URL para acessar o evento, caso seja remoto.
     private String location; // O endereço físico do evento, caso seja presencial.
-    private Boolean isRemote; // Indica se o evento é remoto (online) ou não.
+    private boolean isRemote; // Indica se o evento é remoto (online) ou não.
 
     @Enumerated(EnumType.STRING) // Salva o nome do enum (ACTIVE, CANCELLED) no banco
     private EventStatus status;
@@ -41,34 +41,11 @@ public class Event {
     /**
      * Construtor para criar uma instância de Event com validações de domínio.
      *
-     * @param title O título do evento.
-     * @param description A descrição do evento.
-     * @param startDateTime A data e hora de início do evento.
-     * @param endDateTime A data e hora de encerramento do evento.
-     * @param maxParticipants O número máximo de participantes.
-     * @param imageUrl A URL da imagem do evento.
-     * @param eventUrl A URL do evento (se remoto).
-     * @param location A localização do evento (se presencial).
-     * @param isRemote Indica se o evento é remoto.
-     * @throws IllegalArgumentException se as datas forem inválidas ou maxParticipants for <= 0.
+     * @throws IllegalArgumentException se as regras de negócio forem violadas.
      */
     public Event(String title, String description, LocalDateTime startDateTime, LocalDateTime endDateTime, int maxParticipants,
-                 String imageUrl, String eventUrl, String location, Boolean isRemote) {
+                 String imageUrl, String eventUrl, String location, Boolean isRemote, int minDurationInMinutes) {
         
-        if (maxParticipants <= 0) {
-            throw new IllegalArgumentException("O número máximo de participantes deve ser maior que 0.");
-        }
-        if (startDateTime.isBefore(LocalDateTime.now())) {
-            throw new IllegalArgumentException("A data de início do evento não pode ser no passado.");
-        }
-        if (endDateTime.isBefore(startDateTime)) {
-            throw new IllegalArgumentException("A data de encerramento deve ser posterior à data de início.");
-        }
-        // Adiciona uma validação de duração mínima (ex: 15 minutos)
-        if (endDateTime.isBefore(startDateTime.plusMinutes(15))) {
-            throw new IllegalArgumentException("O evento deve ter uma duração de pelo menos 15 minutos.");
-        }
-
         this.id = null; // O ID será gerado pelo JPA
         this.title = title;
         this.description = description;
@@ -80,7 +57,9 @@ public class Event {
         this.eventUrl = eventUrl;
         this.location = location;
         this.isRemote = isRemote;
-        this.status = EventStatus.ACTIVE; // Inicializa como ativo por padrão
+        this.status = EventStatus.ACTIVE;
+        
+        validateBusinessRules(minDurationInMinutes);
     }
 
     /**
@@ -93,7 +72,7 @@ public class Event {
             throw new IllegalStateException("Não é possível se inscrever em um evento que não está ativo.");
         }
         if (this.registeredParticipants >= this.maxParticipants) {
-            throw new EventFullException();
+            throw new EventFullException("O evento já está lotado.");
         }
         this.registeredParticipants++;
     }
@@ -124,6 +103,78 @@ public class Event {
             throw new IllegalStateException("Não é possível finalizar um evento que ainda não terminou.");
         }
         this.status = EventStatus.FINISHED;
+    }
+
+    /**
+     * Atualiza os detalhes de um evento com base nos dados de um objeto de dados do domínio.
+     * Apenas os campos não nulos no objeto de dados são usados para a atualização.
+     *
+     * @param data O objeto {@link EventUpdateData} com os novos dados.
+     * @param minDurationInMinutes A duração mínima configurada para um evento.
+     * @throws IllegalStateException se o evento não estiver ativo.
+     * @throws IllegalArgumentException se as novas regras de negócio forem violadas.
+     */
+    public void updateDetails(EventUpdateData data, int minDurationInMinutes) {
+        if (this.status != EventStatus.ACTIVE) {
+            throw new IllegalStateException("Apenas eventos ativos podem ser atualizados.");
+        }
+
+        if (data.title() != null && !data.title().isBlank()) this.title = data.title();
+        if (data.description() != null) this.description = data.description();
+        if (data.maxParticipants() != null) {
+            if (data.maxParticipants() < this.registeredParticipants) {
+                throw new IllegalArgumentException("O número máximo de participantes não pode ser menor que o número de inscritos (" + this.registeredParticipants + ").");
+            }
+            this.maxParticipants = data.maxParticipants();
+        }
+        if (data.startDateTime() != null) this.startDateTime = data.startDateTime();
+        if (data.endDateTime() != null) this.endDateTime = data.endDateTime();
+        if (data.imageUrl() != null) this.imageUrl = data.imageUrl();
+        if (data.eventUrl() != null) this.eventUrl = data.eventUrl();
+        if (data.location() != null) this.location = data.location();
+        if (data.remote() != null) this.isRemote = data.remote();
+
+        validateBusinessRules(minDurationInMinutes);
+    }
+
+    private void validateBusinessRules(int minDurationInMinutes) {
+        // Validações de consistência de dados
+        if (title == null || title.trim().length() < 3) {
+            throw new IllegalArgumentException("O título deve ter no mínimo 3 caracteres.");
+        }
+        if (description == null || description.trim().length() < 10) {
+            throw new IllegalArgumentException("A descrição deve ter no mínimo 10 caracteres.");
+        }
+        if (this.maxParticipants <= 0) {
+            throw new IllegalArgumentException("O número máximo de participantes deve ser maior que 0.");
+        }
+        if (this.startDateTime.isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("A data de início do evento deve ser no futuro.");
+        }
+        if (this.endDateTime.isBefore(this.startDateTime)) {
+            throw new IllegalArgumentException("A data de encerramento deve ser posterior à data de início.");
+        }
+        if (this.endDateTime.isBefore(this.startDateTime.plusMinutes(minDurationInMinutes))) {
+            throw new IllegalArgumentException("O evento deve ter uma duração de pelo menos " + minDurationInMinutes + " minutos.");
+        }
+        
+        // Validações de consistência entre 'is_remote', 'location' e 'eventUrl'
+        if (this.isRemote) {
+            if (this.location != null && !this.location.isBlank()) {
+                throw new IllegalArgumentException("Um evento remoto não pode ter uma localização física.");
+            }
+            if (this.eventUrl == null || this.eventUrl.isBlank()) {
+                throw new IllegalArgumentException("Um evento remoto deve ter uma URL de evento.");
+            }
+        }
+        if (!this.isRemote) {
+            if (this.location == null || this.location.isBlank()) {
+                throw new IllegalArgumentException("Um evento presencial deve ter uma localização física.");
+            }
+            if (this.eventUrl != null && !this.eventUrl.isBlank()) {
+                throw new IllegalArgumentException("Um evento presencial não deve ter uma URL de evento.");
+            }
+        }
     }
 
     @Override

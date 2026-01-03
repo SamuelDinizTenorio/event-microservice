@@ -1,10 +1,7 @@
 package com.Samuel.event_microservice.infrastructure.dto.event;
 
 import com.Samuel.event_microservice.core.validation.ValidEventLocation;
-import jakarta.validation.constraints.Future;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.*;
 import org.hibernate.validator.constraints.URL;
 
 import java.time.LocalDateTime;
@@ -21,14 +18,16 @@ import java.time.LocalDateTime;
  * @param imageUrl        A URL de uma imagem de banner para o evento. Deve ser uma URL válida.
  * @param eventUrl        A URL para acessar o evento, caso seja remoto. Validado condicionalmente.
  * @param location        O endereço físico do evento, caso seja presencial. Validado condicionalmente.
- * @param isRemote        Indica se o evento é remoto (online) ou não. Não pode ser nulo.
+ * @param is_remote          Indica se o evento é remoto (online) ou não.
  */
 @ValidEventLocation
 public record EventRequestDTO(
         @NotBlank(message = "O título não pode estar em branco.")
+        @Size(min = 3, message = "O título deve ter no mínimo 3 caracteres.")
         String title,
 
         @NotBlank(message = "A descrição não pode estar em branco.")
+        @Size(min = 10, message = "A descrição deve ter no mínimo 10 caracteres.")
         String description,
 
         @NotNull(message = "A data de início não pode ser nula.")
@@ -39,17 +38,17 @@ public record EventRequestDTO(
         @Future(message = "A data de encerramento do evento deve ser no futuro.")
         LocalDateTime endDateTime,
 
-        @Min(value = 1, message = "O número máximo de participantes deve ser de no mínimo 1.")
+        @Min(value = 1, message = "O número máximo de participantes deve ser maior que 0.")
         int maxParticipants,
 
         @URL(message = "A URL da imagem é inválida.")
         String imageUrl,
 
+        @URL(message = "A URL do evento é inválida.")
         String eventUrl,
 
         String location,
 
-        @NotNull(message = "É necessário informar se o evento é remoto.")
-        Boolean isRemote
+        boolean is_remote
 ) {
 }

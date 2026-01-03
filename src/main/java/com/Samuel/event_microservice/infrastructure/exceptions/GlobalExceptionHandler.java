@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -26,7 +27,7 @@ public class GlobalExceptionHandler {
 
     /**
      * Trata as exceções de validação dos DTOs anotados com @Valid.
-     * Captura cada campo que falhou na validação e o retorna em um mapa de erros.
+     * Captura cada campo que falhou na validação e o retorna um mapa de erros.
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
@@ -37,7 +38,6 @@ public class GlobalExceptionHandler {
             String errorMessage = error.getDefaultMessage();
             validationErrors.put(fieldName, errorMessage);
         });
-
         logger.warn("Validation failed for request [{}]: {}", request.getRequestURI(), validationErrors);
 
         ErrorResponseDTO errorResponseDTO = new ErrorResponseDTO(
@@ -51,20 +51,19 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Trata a exceção para quando um endpoint não é encontrado (404).
-     * Este handler é ativado pela configuração `spring.mvc.throw-exception-if-no-handler-found=true`.
+     * Trata a exceção para quando o corpo da requisição está ausente ou é ilegível.
      */
-    @ExceptionHandler(NoHandlerFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ResponseEntity<ErrorResponseDTO> handleNoHandlerFoundException(NoHandlerFoundException ex, HttpServletRequest request) {
-        logger.warn("No handler found for request: {} {}", ex.getHttpMethod(), ex.getRequestURL());
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<ErrorResponseDTO> handleHttpMessageNotReadable(HttpMessageNotReadableException ex, HttpServletRequest request) {
+        logger.warn("Unreadable or missing request body for [{}]: {}", request.getRequestURI(), ex.getMessage());
         ErrorResponseDTO errorResponseDTO = new ErrorResponseDTO(
-                HttpStatus.NOT_FOUND.value(),
-                "Not Found",
-                "O endpoint '" + ex.getRequestURL() + "' não foi encontrado.",
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                "O corpo da requisição está ausente ou malformado.",
                 request.getRequestURI()
         );
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponseDTO);
+        return ResponseEntity.badRequest().body(errorResponseDTO);
     }
 
     /**
@@ -87,16 +86,16 @@ public class GlobalExceptionHandler {
      * Trata a exceção para quando um evento está lotado.
      */
     @ExceptionHandler(EventFullException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseStatus(HttpStatus.CONFLICT)
     public ResponseEntity<ErrorResponseDTO> handleEventFullException(EventFullException ex, HttpServletRequest request) {
         logger.warn("Attempt to register in a full event [{}]: {}", request.getRequestURI(), ex.getMessage());
         ErrorResponseDTO errorResponseDTO = new ErrorResponseDTO(
-                HttpStatus.BAD_REQUEST.value(),
-                "Bad Request",
+                HttpStatus.CONFLICT.value(),
+                "Conflict",
                 ex.getMessage(),
                 request.getRequestURI()
         );
-        return ResponseEntity.badRequest().body(errorResponseDTO);
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponseDTO);
     }
 
     /**
@@ -129,6 +128,40 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.badRequest().body(errorResponseDTO);
+    }
+
+    /**
+     * Trata exceções de estado ilegal, que indicam uma violação de regra de negócio
+     * baseada no estado atual do recurso (ex: tentar cancelar um evento já cancelado).
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<ErrorResponseDTO> handleIllegalStateException(IllegalStateException ex, HttpServletRequest request) {
+        logger.warn("Illegal state in request [{}]: {}", request.getRequestURI(), ex.getMessage());
+        ErrorResponseDTO errorResponseDTO = new ErrorResponseDTO(
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.badRequest().body(errorResponseDTO);
+    }
+
+    /**
+     * Trata a exceção para quando um endpoint não é encontrado (404).
+     * Este handler é ativado pela configuração `spring.mvc.throw-exception-if-no-handler-found=true`.
+     */
+    @ExceptionHandler(NoHandlerFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ResponseEntity<ErrorResponseDTO> handleNoHandlerFoundException(NoHandlerFoundException ex, HttpServletRequest request) {
+        logger.warn("No handler found for request: {} {}", ex.getHttpMethod(), ex.getRequestURL());
+        ErrorResponseDTO errorResponseDTO = new ErrorResponseDTO(
+                HttpStatus.NOT_FOUND.value(),
+                "Not Found",
+                "O endpoint '" + ex.getRequestURL() + "' não foi encontrado.",
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponseDTO);
     }
 
     /**

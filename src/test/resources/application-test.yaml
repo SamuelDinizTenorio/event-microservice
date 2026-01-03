@@ -1,0 +1,41 @@
+# =================================================
+# == Configurações para o Perfil de Teste (test) ==
+# =================================================
+
+spring:
+  # --- Configuração do Banco de Dados em Memória ---
+  datasource:
+    # O Spring Boot infere o driver a partir da URL.
+    # Não é necessário especificar o driverClassName.
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+
+  # --- Configuração do JPA para Testes ---
+  jpa:
+    hibernate:
+      # 'create-drop' diz ao Hibernate para criar as tabelas no início dos testes
+      # e destruí-las no final. Perfeito para um ambiente de teste limpo.
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        # Dialeto específico para o H2, para garantir compatibilidade.
+        dialect: org.hibernate.dialect.H2Dialect
+
+  # --- Desabilita o Flyway por padrão para testes ---
+  # Ele será reativado especificamente nos testes de repositório que usam Testcontainers.
+  flyway:
+    enabled: false
+
+  # --- Desabilita Tarefas Agendadas ---
+  task:
+    scheduling:
+      enabled: false
+
+# --- Configuração de Logging para Testes ---
+logging:
+  level:
+    com.Samuel.event_microservice: WARN
+    org.springframework: WARN
+    org.hibernate: WARN

@@ -3,6 +3,7 @@ package com.Samuel.event_microservice.infrastructure.controller;
 import com.Samuel.event_microservice.infrastructure.dto.PageResponseDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventRequestDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventResponseDTO;
+import com.Samuel.event_microservice.infrastructure.dto.event.EventUpdateDTO;
 import com.Samuel.event_microservice.infrastructure.dto.subscription.RegisteredParticipantDTO;
 import com.Samuel.event_microservice.infrastructure.dto.subscription.SubscriptionRequestDTO;
 import com.Samuel.event_microservice.infrastructure.dto.SuccessResponseDTO;
@@ -66,13 +67,13 @@ public class EventController {
     /**
      * Retorna os detalhes de um evento específico pelo seu ID.
      *
-     * @param id O UUID do evento, fornecido como uma variável de caminho.
+     * @param eventId O UUID do evento, fornecido como uma variável de caminho.
      * @return Um {@link ResponseEntity} com status 200 OK e o {@link EventResponseDTO} do evento.
      */
-    @GetMapping("/{id}")
-    public ResponseEntity<EventResponseDTO> getEventDetails(@PathVariable UUID id) {
-        logger.info("Received request to get details for event with ID: {}", id);
-        EventResponseDTO event = eventUseCase.getEventDetails(id);
+    @GetMapping("/{eventId}")
+    public ResponseEntity<EventResponseDTO> getEventDetails(@PathVariable UUID eventId) {
+        logger.info("Received request to get details for event with ID: {}", eventId);
+        EventResponseDTO event = eventUseCase.getEventDetails(eventId);
         return ResponseEntity.ok(event);
     }
 
@@ -89,7 +90,7 @@ public class EventController {
         EventResponseDTO createdEvent = eventUseCase.createEvent(eventRequest);
         
         URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
-                .path("/{id}")
+                .path("/{eventId}")
                 .buildAndExpand(createdEvent.id())
                 .toUri();
         
@@ -99,15 +100,32 @@ public class EventController {
     /**
      * Cancela um evento, marcando o seu status como CANCELLED.
      *
-     * @param id O UUID do evento a ser cancelado.
+     * @param eventId O UUID do evento a ser cancelado.
      * @return Um {@link ResponseEntity} com status 200 OK e uma mensagem de sucesso.
      */
-    @PostMapping("/{id}/cancel")
-    public ResponseEntity<SuccessResponseDTO> cancelEvent(@PathVariable UUID id) {
-        logger.info("Received request to cancel event with ID: {}", id);
-        eventUseCase.cancelEvent(id);
+    @PostMapping("/{eventId}/cancel")
+    public ResponseEntity<SuccessResponseDTO> cancelEvent(@PathVariable UUID eventId) {
+        logger.info("Received request to cancel event with ID: {}", eventId);
+        eventUseCase.cancelEvent(eventId);
         SuccessResponseDTO response = new SuccessResponseDTO("Evento cancelado com sucesso!");
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Atualiza parcialmente um evento existente com base nos dados fornecidos.
+     * Apenas os campos não nulos do DTO serão considerados para atualização.
+     *
+     * @param eventId O UUID do evento a ser atualizado.
+     * @param eventUpdateDTO O DTO com os campos a serem atualizados.
+     * @return Um {@link ResponseEntity} com status 200 OK e o {@link EventResponseDTO} do evento atualizado.
+     */
+    @PatchMapping("/{eventId}")
+    public ResponseEntity<EventResponseDTO> updateEvent(
+            @PathVariable UUID eventId,
+            @RequestBody @Valid EventUpdateDTO eventUpdateDTO) {
+        logger.info("Received request to update event with ID: {}", eventId);
+        EventResponseDTO updatedEvent = eventUseCase.updateEvent(eventId, eventUpdateDTO);
+        return ResponseEntity.ok(updatedEvent);
     }
 
     /**

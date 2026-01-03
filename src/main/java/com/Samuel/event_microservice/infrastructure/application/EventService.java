@@ -1,5 +1,6 @@
 package com.Samuel.event_microservice.infrastructure.application;
 
+import com.Samuel.event_microservice.core.data.EventUpdateData;
 import com.Samuel.event_microservice.core.models.Event;
 import com.Samuel.event_microservice.core.models.Subscription;
 import com.Samuel.event_microservice.core.exceptions.EventNotFoundException;
@@ -8,9 +9,11 @@ import com.Samuel.event_microservice.core.ports.EventNotificationPort;
 import com.Samuel.event_microservice.core.ports.EventRepositoryPort;
 import com.Samuel.event_microservice.core.ports.SubscriptionRepositoryPort;
 import com.Samuel.event_microservice.core.usecases.EventUseCase;
+import com.Samuel.event_microservice.infrastructure.config.EventBusinessConfig;
 import com.Samuel.event_microservice.infrastructure.dto.PageResponseDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventRequestDTO;
 import com.Samuel.event_microservice.infrastructure.dto.event.EventResponseDTO;
+import com.Samuel.event_microservice.infrastructure.dto.event.EventUpdateDTO;
 import com.Samuel.event_microservice.infrastructure.dto.subscription.RegisteredParticipantDTO;
 import com.Samuel.event_microservice.infrastructure.dto.subscription.SubscriptionRequestDTO;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +42,7 @@ public class EventService implements EventUseCase {
     private final EventRepositoryPort eventRepository;
     private final SubscriptionRepositoryPort subscriptionRepository;
     private final EventNotificationPort eventNotificationPort;
+    private final EventBusinessConfig eventConfig;
 
     /**
      * {@inheritDoc}
@@ -56,7 +60,8 @@ public class EventService implements EventUseCase {
                 eventRequest.imageUrl(),
                 eventRequest.eventUrl(),
                 eventRequest.location(),
-                eventRequest.isRemote()
+                eventRequest.is_remote(),
+                eventConfig.getMinDurationMinutes()
         );
         eventRepository.save(newEvent);
         logger.info("Event created successfully with ID: {}", newEvent.getId());
@@ -134,6 +139,38 @@ public class EventService implements EventUseCase {
 
     /**
      * {@inheritDoc}
+     */
+    @Override
+    @Transactional
+    public EventResponseDTO updateEvent(UUID eventId, EventUpdateDTO eventUpdateDTO) {
+        logger.info("Attempting to update event with ID: {}", eventId);
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> {
+                    logger.warn("Update failed: Event with ID {} not found.", eventId);
+                    return new EventNotFoundException("Evento com ID " + eventId + " não encontrado.");
+                });
+
+        EventUpdateData updateData = new EventUpdateData(
+                eventUpdateDTO.title(),
+                eventUpdateDTO.description(),
+                eventUpdateDTO.startDateTime(),
+                eventUpdateDTO.endDateTime(),
+                eventUpdateDTO.maxParticipants(),
+                eventUpdateDTO.imageUrl(),
+                eventUpdateDTO.eventUrl(),
+                eventUpdateDTO.location(),
+                eventUpdateDTO.is_remote()
+        );
+
+        event.updateDetails(updateData, eventConfig.getMinDurationMinutes());
+
+        Event updatedEvent = eventRepository.save(event);
+        logger.info("Event with ID {} updated successfully.", eventId);
+        return new EventResponseDTO(updatedEvent);
+    }
+
+    /**
+     * {@inheritDoc}
      * <p>
      * Esta implementação é transacional. Ela verifica a existência do evento, se ele está ativo,
      * se a inscrição já existe e se há vagas disponíveis.
@@ -186,7 +223,8 @@ public class EventService implements EventUseCase {
             throw new EventNotFoundException("Evento com ID " + eventId + " não encontrado.");
         }
 
-        Page<Subscription> subscriptions = subscriptionRepository.findByEvent(eventRepository.getReferenceById(eventId), pageable);
+        Event event = eventRepository.getReferenceById(eventId);
+        Page<Subscription> subscriptions = subscriptionRepository.findByEvent(event, pageable);
         logger.info("Found {} participants for event {}.", subscriptions.getTotalElements(), eventId);
         Page<RegisteredParticipantDTO> registeredParticipantDTOPage = subscriptions.map(subscription -> new RegisteredParticipantDTO(subscription.getParticipantEmail()));
         return new PageResponseDTO<>(registeredParticipantDTOPage);

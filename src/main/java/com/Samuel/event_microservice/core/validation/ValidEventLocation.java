@@ -14,8 +14,8 @@ import java.lang.annotation.Target;
  * <p>
  * A validação é aplicada no nível da classe e verifica as seguintes regras:
  * <ul>
- *     <li>Se o evento for remoto ({@code isRemote = true}), o campo {@code eventUrl} deve ser preenchido e o campo {@code location} deve ser nulo ou vazio.</li>
- *     <li>Se o evento for presencial ({@code isRemote = false}), o campo {@code location} deve ser preenchido e o campo {@code eventUrl} deve ser nulo ou vazio.</li>
+ *     <li>Se o evento for remoto ({@code is_remote = true}), o campo {@code eventUrl} deve ser preenchido e o campo {@code location} deve ser nulo ou vazio.</li>
+ *     <li>Se o evento for presencial ({@code is_remote = false}), o campo {@code location} deve ser preenchido e o campo {@code eventUrl} deve ser nulo ou vazio.</li>
  * </ul>
  * A lógica de validação é implementada em {@link ValidEventLocationValidator}.
  */
