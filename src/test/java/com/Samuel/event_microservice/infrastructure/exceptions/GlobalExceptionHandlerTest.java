@@ -1,27 +1,23 @@
 package com.Samuel.event_microservice.infrastructure.exceptions;
 
 import com.Samuel.event_microservice.core.usecases.EventUseCase;
+import com.Samuel.event_microservice.infrastructure.exceptions.helper.TestController;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.util.UUID;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.hamcrest.Matchers.notNullValue;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest // Carrega o contexto completo da aplicação.
-@AutoConfigureMockMvc // Injeta e configura o MockMvc.
 @ActiveProfiles("test") // Separa configurações de teste
 class GlobalExceptionHandlerTest {
 
@@ -30,6 +26,15 @@ class GlobalExceptionHandlerTest {
 
     @MockBean
     private EventUseCase eventUseCase;
+
+    @BeforeEach
+    void setUp() {
+        // Configura o MockMvc em modo standalone com um Controller de teste
+        mockMvc = MockMvcBuilders
+                .standaloneSetup(new TestController())
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+    }
 
     @Test
     @DisplayName("Should return 400 Bad Request for MethodArgumentNotValidException")
@@ -189,21 +194,17 @@ class GlobalExceptionHandlerTest {
     @DisplayName("Should return 500 Internal Server Error for any unhandled exception")
     void handleGlobalException() throws Exception {
         // Arrange
-        UUID eventId = UUID.randomUUID();
+        String expectedPath = "/test/unhandled-exception";
         String genericError = "Ocorreu um erro inesperado no servidor.";
 
-        // Configura o mock do useCase para lançar uma exceção genérica e inesperada
-        when(eventUseCase.getEventDetails(eventId))
-                .thenThrow(new RuntimeException("Erro de conexão com o banco de dados X."));
-
         // Act & Assert
-        mockMvc.perform(get("/events/{eventId}", eventId) // Usamos um endpoint real que chama o useCase
+        mockMvc.perform(get(expectedPath)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.status").value(500))
                 .andExpect(jsonPath("$.error").value("Internal Server Error"))
-                .andExpect(jsonPath("$.message").value(genericError)) // Verifica se a mensagem retornada é a genérica e segura, e não a mensagem interna da exceção
-                .andExpect(jsonPath("$.path").value("/events/" + eventId))
+                .andExpect(jsonPath("$.message").value(genericError))
+                .andExpect(jsonPath("$.path").value(expectedPath))
                 .andExpect(jsonPath("$.timestamp").exists())
                 .andExpect(jsonPath("$.errors").doesNotExist());
     }

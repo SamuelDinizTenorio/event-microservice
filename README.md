@@ -36,8 +36,9 @@ O projeto foi construído seguindo princípios de **Arquitetura Limpa (Hexagonal
 - **Maven**: Para gerenciamento de dependências e build.
 - **Docker & Docker Compose**: Para containerização do ambiente de desenvolvimento.
 - **Testcontainers**: Para testes de integração com um banco de dados real.
-- **JUnit 5 & Mockito**: Para testes unitários e de integração.
-- **Lombok**: Para reduzir código boilerplate.
+- **JUnit 5 & Mockito**: Para a estrutura de testes de unidade e integração robustos.
+- **AssertJ**: Para asserções fluentes e legíveis nos testes.
+- **Lombok**: Para reduzir código boilerplate (getters, setters, construtores, etc...).
 
 ---
 
@@ -129,6 +130,7 @@ A estratégia de testes do projeto é dividida em camadas para garantir cobertur
 
 - **JUnit 5** é o framework principal para a escrita de todos os testes.
 - **Mockito** é utilizado para criar "mocks" (objetos falsos) de dependências externas, permitindo isolar a lógica de negócio nos testes de serviço e de controller.
+- **AssertJ** fornece uma API rica e fluente para escrever asserções legíveis e poderosas.
 - **Testcontainers** é usado nos testes da camada de persistência (`@DataJpaTest`) para iniciar um container Docker do PostgreSQL. Isso garante que as queries e migrações sejam testadas contra um banco de dados real, idêntico ao de produção.
 
 - **Pré-requisito:** Para executar os testes de integração, é necessário ter o **Docker em execução** na sua máquina.

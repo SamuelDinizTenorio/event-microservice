@@ -1,4 +1,4 @@
-package com.Samuel.event_microservice.test_support;
+package com.Samuel.event_microservice.infrastructure.exceptions.helper;
 
 import jakarta.validation.constraints.NotBlank;
 

@@ -1,7 +1,13 @@
 server:
   port: ${APP_PORT:8080}
   error:
+    # Não inclui o nome da classe da exceção na resposta de erro.
+    include-exception: false
+    # Nunca inclui o stack trace na resposta. Essencial para segurança em produção.
     include-stacktrace: never
+    # Nunca inclui a mensagem da exceção na resposta padrão do Spring.
+    # Permite que o GlobalExceptionHandler tenha controle total sobre a mensagem de erro.
+    include-message: never
 
 management:
   endpoints:
@@ -63,3 +69,14 @@ logging:
     org.hibernate.type.descriptor.sql: TRACE
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%15.15t] %-5level %-40.40logger{39} : %m%n"
+  file:
+    # Caminho e nome do arquivo de log. Será criado na pasta 'logs' na raiz do projeto.
+    name: ./logs/email-service.log
+  logback:
+    rollingpolicy:
+      # Tamanho máximo de cada arquivo de log antes de ser rotacionado.
+      max-file-size: 10MB
+      # Número máximo de arquivos de log antigos a serem mantidos.
+      max-history: 3
+      # Nome do padrão para os arquivos de log arquivados.
+      file-name-pattern: ./logs/email-service-%d{yyyy-MM-dd}.%i.log

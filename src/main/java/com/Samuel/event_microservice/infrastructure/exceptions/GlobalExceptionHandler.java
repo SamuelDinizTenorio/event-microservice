@@ -5,8 +5,7 @@ import com.Samuel.event_microservice.core.exceptions.EventNotFoundException;
 import com.Samuel.event_microservice.core.exceptions.SubscriptionAlreadyExistsException;
 import com.Samuel.event_microservice.infrastructure.dto.ErrorResponseDTO;
 import jakarta.servlet.http.HttpServletRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -21,9 +20,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
-
-    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     /**
      * Trata as exceções de validação dos DTOs anotados com @Valid.
@@ -38,7 +36,7 @@ public class GlobalExceptionHandler {
             String errorMessage = error.getDefaultMessage();
             validationErrors.put(fieldName, errorMessage);
         });
-        logger.warn("Validation failed for request [{}]: {}", request.getRequestURI(), validationErrors);
+        log.warn("Validation failed for request [{}]: {}", request.getRequestURI(), validationErrors);
 
         ErrorResponseDTO errorResponseDTO = new ErrorResponseDTO(
                 HttpStatus.BAD_REQUEST.value(),
@@ -56,7 +54,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ResponseEntity<ErrorResponseDTO> handleHttpMessageNotReadable(HttpMessageNotReadableException ex, HttpServletRequest request) {
-        logger.warn("Unreadable or missing request body for [{}]: {}", request.getRequestURI(), ex.getMessage());
+        log.warn("Unreadable or missing request body for [{}]: {}", request.getRequestURI(), ex.getMessage());
         ErrorResponseDTO errorResponseDTO = new ErrorResponseDTO(
                 HttpStatus.BAD_REQUEST.value(),
                 "Bad Request",
@@ -72,7 +70,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(EventNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ResponseEntity<ErrorResponseDTO> handleEventNotFoundException(EventNotFoundException ex, HttpServletRequest request) {
-        logger.warn("Event not found for request [{}]: {}", request.getRequestURI(), ex.getMessage());
+        log.warn("Event not found for request [{}]: {}", request.getRequestURI(), ex.getMessage());
         ErrorResponseDTO errorResponseDTO = new ErrorResponseDTO(
                 HttpStatus.NOT_FOUND.value(),
                 "Not Found",
@@ -88,7 +86,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(EventFullException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public ResponseEntity<ErrorResponseDTO> handleEventFullException(EventFullException ex, HttpServletRequest request) {
-        logger.warn("Attempt to register in a full event [{}]: {}", request.getRequestURI(), ex.getMessage());
+        log.warn("Attempt to register in a full event [{}]: {}", request.getRequestURI(), ex.getMessage());
         ErrorResponseDTO errorResponseDTO = new ErrorResponseDTO(
                 HttpStatus.CONFLICT.value(),
                 "Conflict",
@@ -104,7 +102,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(SubscriptionAlreadyExistsException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public ResponseEntity<ErrorResponseDTO> handleSubscriptionAlreadyExistsException(SubscriptionAlreadyExistsException ex, HttpServletRequest request) {
-        logger.warn("Duplicate subscription attempt [{}]: {}", request.getRequestURI(), ex.getMessage());
+        log.warn("Duplicate subscription attempt [{}]: {}", request.getRequestURI(), ex.getMessage());
         ErrorResponseDTO errorResponseDTO = new ErrorResponseDTO(
                 HttpStatus.CONFLICT.value(),
                 "Conflict",
@@ -120,7 +118,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ResponseEntity<ErrorResponseDTO> handleIllegalArgumentException(IllegalArgumentException ex, HttpServletRequest request) {
-        logger.warn("Illegal argument in request [{}]: {}", request.getRequestURI(), ex.getMessage());
+        log.warn("Illegal argument in request [{}]: {}", request.getRequestURI(), ex.getMessage());
         ErrorResponseDTO errorResponseDTO = new ErrorResponseDTO(
                 HttpStatus.BAD_REQUEST.value(),
                 "Bad Request",
@@ -137,7 +135,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ResponseEntity<ErrorResponseDTO> handleIllegalStateException(IllegalStateException ex, HttpServletRequest request) {
-        logger.warn("Illegal state in request [{}]: {}", request.getRequestURI(), ex.getMessage());
+        log.warn("Illegal state in request [{}]: {}", request.getRequestURI(), ex.getMessage());
         ErrorResponseDTO errorResponseDTO = new ErrorResponseDTO(
                 HttpStatus.BAD_REQUEST.value(),
                 "Bad Request",
@@ -154,7 +152,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NoHandlerFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ResponseEntity<ErrorResponseDTO> handleNoHandlerFoundException(NoHandlerFoundException ex, HttpServletRequest request) {
-        logger.warn("No handler found for request: {} {}", ex.getHttpMethod(), ex.getRequestURL());
+        log.warn("No handler found for request: {} {}", ex.getHttpMethod(), ex.getRequestURL());
         ErrorResponseDTO errorResponseDTO = new ErrorResponseDTO(
                 HttpStatus.NOT_FOUND.value(),
                 "Not Found",
@@ -171,7 +169,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ResponseEntity<ErrorResponseDTO> handleGlobalException(Exception ex, HttpServletRequest request) {
-        logger.error("Unexpected server error for request [{}]:", request.getRequestURI(), ex);
+        log.error("Unexpected server error for request [{}]:", request.getRequestURI(), ex);
         ErrorResponseDTO errorResponseDTO = new ErrorResponseDTO(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "Internal Server Error",

@@ -10,8 +10,7 @@ import com.Samuel.event_microservice.infrastructure.dto.SuccessResponseDTO;
 import com.Samuel.event_microservice.core.usecases.EventUseCase;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -31,9 +30,9 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/events")
 @RequiredArgsConstructor
+@Slf4j
 public class EventController {
 
-    private static final Logger logger = LoggerFactory.getLogger(EventController.class);
     private final EventUseCase eventUseCase;
 
     /**
@@ -45,7 +44,7 @@ public class EventController {
     @GetMapping
     public ResponseEntity<PageResponseDTO<EventResponseDTO>> getAllEvents(
             @PageableDefault(sort = "startDateTime", direction = Sort.Direction.ASC) Pageable pageable) {
-        logger.info("Received request to get all events. Page: {}, Size: {}", pageable.getPageNumber(), pageable.getPageSize());
+        log.info("Received request to get all events. Page: {}, Size: {}", pageable.getPageNumber(), pageable.getPageSize());
         PageResponseDTO<EventResponseDTO> events = eventUseCase.getAllEvents(pageable);
         return ResponseEntity.ok(events);
     }
@@ -59,7 +58,7 @@ public class EventController {
     @GetMapping("/upcoming")
     public ResponseEntity<PageResponseDTO<EventResponseDTO>> getUpcomingEvents(
             @PageableDefault(sort = "startDateTime", direction = Sort.Direction.ASC) Pageable pageable) {
-        logger.info("Received request to get upcoming events. Page: {}, Size: {}", pageable.getPageNumber(), pageable.getPageSize());
+        log.info("Received request to get upcoming events. Page: {}, Size: {}", pageable.getPageNumber(), pageable.getPageSize());
         PageResponseDTO<EventResponseDTO> events = eventUseCase.getUpcomingEvents(pageable);
         return ResponseEntity.ok(events);
     }
@@ -72,7 +71,7 @@ public class EventController {
      */
     @GetMapping("/{eventId}")
     public ResponseEntity<EventResponseDTO> getEventDetails(@PathVariable UUID eventId) {
-        logger.info("Received request to get details for event with ID: {}", eventId);
+        log.info("Received request to get details for event with ID: {}", eventId);
         EventResponseDTO event = eventUseCase.getEventDetails(eventId);
         return ResponseEntity.ok(event);
     }
@@ -86,7 +85,7 @@ public class EventController {
      */
     @PostMapping
     public ResponseEntity<EventResponseDTO> createEvent(@RequestBody @Valid EventRequestDTO eventRequest) {
-        logger.info("Received request to create a new event with title: {}", eventRequest.title());
+        log.info("Received request to create a new event with title: {}", eventRequest.title());
         EventResponseDTO createdEvent = eventUseCase.createEvent(eventRequest);
         
         URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -105,7 +104,7 @@ public class EventController {
      */
     @PostMapping("/{eventId}/cancel")
     public ResponseEntity<SuccessResponseDTO> cancelEvent(@PathVariable UUID eventId) {
-        logger.info("Received request to cancel event with ID: {}", eventId);
+        log.info("Received request to cancel event with ID: {}", eventId);
         eventUseCase.cancelEvent(eventId);
         SuccessResponseDTO response = new SuccessResponseDTO("Evento cancelado com sucesso!");
         return ResponseEntity.ok(response);
@@ -123,7 +122,7 @@ public class EventController {
     public ResponseEntity<EventResponseDTO> updateEvent(
             @PathVariable UUID eventId,
             @RequestBody @Valid EventUpdateDTO eventUpdateDTO) {
-        logger.info("Received request to update event with ID: {}", eventId);
+        log.info("Received request to update event with ID: {}", eventId);
         EventResponseDTO updatedEvent = eventUseCase.updateEvent(eventId, eventUpdateDTO);
         return ResponseEntity.ok(updatedEvent);
     }
@@ -139,7 +138,7 @@ public class EventController {
     public ResponseEntity<SuccessResponseDTO> registerParticipant(
             @PathVariable UUID eventId,
             @RequestBody @Valid SubscriptionRequestDTO subscriptionRequest) {
-        logger.info("Received request to register participant {} for event {}", subscriptionRequest.participantEmail(), eventId);
+        log.info("Received request to register participant {} for event {}", subscriptionRequest.participantEmail(), eventId);
         eventUseCase.registerParticipant(eventId, subscriptionRequest);
         SuccessResponseDTO response = new SuccessResponseDTO("Inscrição realizada com sucesso!");
         return ResponseEntity.ok(response);
@@ -156,7 +155,7 @@ public class EventController {
     public ResponseEntity<PageResponseDTO<RegisteredParticipantDTO>> getRegisteredParticipants(
             @PathVariable UUID eventId,
             @PageableDefault(sort = "createdAt", direction = Sort.Direction.ASC) Pageable pageable) {
-        logger.info("Received request to get participants for event {}. Page: {}, Size: {}", eventId, pageable.getPageNumber(), pageable.getPageSize());
+        log.info("Received request to get participants for event {}. Page: {}, Size: {}", eventId, pageable.getPageNumber(), pageable.getPageSize());
         PageResponseDTO<RegisteredParticipantDTO> participants = eventUseCase.getRegisteredParticipants(eventId, pageable);
         return ResponseEntity.ok(participants);
     }

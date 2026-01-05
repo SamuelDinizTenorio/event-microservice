@@ -17,8 +17,7 @@ import com.Samuel.event_microservice.infrastructure.dto.event.EventUpdateDTO;
 import com.Samuel.event_microservice.infrastructure.dto.subscription.RegisteredParticipantDTO;
 import com.Samuel.event_microservice.infrastructure.dto.subscription.SubscriptionRequestDTO;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -35,9 +34,8 @@ import java.util.UUID;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class EventService implements EventUseCase {
-
-    private static final Logger logger = LoggerFactory.getLogger(EventService.class);
 
     private final EventRepositoryPort eventRepository;
     private final SubscriptionRepositoryPort subscriptionRepository;
@@ -50,7 +48,7 @@ public class EventService implements EventUseCase {
     @Override
     @Transactional
     public EventResponseDTO createEvent(EventRequestDTO eventRequest) {
-        logger.info("Creating a new event with title: {}", eventRequest.title());
+        log.info("Creating a new event with title: {}", eventRequest.title());
         Event newEvent = new Event(
                 eventRequest.title(),
                 eventRequest.description(),
@@ -64,7 +62,7 @@ public class EventService implements EventUseCase {
                 eventConfig.getMinDurationMinutes()
         );
         eventRepository.save(newEvent);
-        logger.info("Event created successfully with ID: {}", newEvent.getId());
+        log.info("Event created successfully with ID: {}", newEvent.getId());
         return new EventResponseDTO(newEvent);
     }
 
@@ -74,9 +72,9 @@ public class EventService implements EventUseCase {
     @Override
     @Transactional(readOnly = true)
     public PageResponseDTO<EventResponseDTO> getAllEvents(Pageable pageable) {
-        logger.info("Fetching all events. Page: {}, Size: {}", pageable.getPageNumber(), pageable.getPageSize());
+        log.info("Fetching all events. Page: {}, Size: {}", pageable.getPageNumber(), pageable.getPageSize());
         Page<Event> eventPage = eventRepository.findAll(pageable);
-        logger.info("Found {} total events.", eventPage.getTotalElements());
+        log.info("Found {} total events.", eventPage.getTotalElements());
         Page<EventResponseDTO> eventResponseDTOPage = eventPage.map(EventResponseDTO::new);
         return new PageResponseDTO<>(eventResponseDTOPage);
     }
@@ -87,9 +85,9 @@ public class EventService implements EventUseCase {
     @Override
     @Transactional(readOnly = true)
     public PageResponseDTO<EventResponseDTO> getUpcomingEvents(Pageable pageable) {
-        logger.info("Fetching upcoming events. Page: {}, Size: {}", pageable.getPageNumber(), pageable.getPageSize());
+        log.info("Fetching upcoming events. Page: {}, Size: {}", pageable.getPageNumber(), pageable.getPageSize());
         Page<Event> eventPage = eventRepository.findUpcomingEvents(LocalDateTime.now(), pageable);
-        logger.info("Found {} upcoming events.", eventPage.getTotalElements());
+        log.info("Found {} upcoming events.", eventPage.getTotalElements());
         Page<EventResponseDTO> eventResponseDTOPage = eventPage.map(EventResponseDTO::new);
         return new PageResponseDTO<>(eventResponseDTOPage);
     }
@@ -100,11 +98,11 @@ public class EventService implements EventUseCase {
     @Override
     @Transactional(readOnly = true)
     public EventResponseDTO getEventDetails(UUID id) {
-        logger.info("Fetching details for event with ID: {}", id);
+        log.info("Fetching details for event with ID: {}", id);
         return eventRepository.findById(id)
                 .map(EventResponseDTO::new)
                 .orElseThrow(() -> {
-                    logger.warn("Event with ID {} not found.", id);
+                    log.warn("Event with ID {} not found.", id);
                     return new EventNotFoundException("Evento com ID " + id + " não encontrado.");
                 });
     }
@@ -118,22 +116,22 @@ public class EventService implements EventUseCase {
     @Override
     @Transactional
     public void cancelEvent(UUID eventId) {
-        logger.info("Attempting to cancel event with ID: {}", eventId);
+        log.info("Attempting to cancel event with ID: {}", eventId);
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> {
-                    logger.warn("Cancellation failed: Event with ID {} not found.", eventId);
+                    log.warn("Cancellation failed: Event with ID {} not found.", eventId);
                     return new EventNotFoundException("Evento com ID " + eventId + " não encontrado.");
                 });
 
         event.cancel();
         
         eventRepository.save(event);
-        logger.info("Event with ID {} cancelled successfully.", eventId);
+        log.info("Event with ID {} cancelled successfully.", eventId);
 
         try {
             eventNotificationPort.notifyParticipantsOfCancellation(event);
         } catch (Exception e) {
-            logger.error("Failed to send cancellation notifications for event {}: {}", eventId, e.getMessage());
+            log.error("Failed to send cancellation notifications for event {}: {}", eventId, e.getMessage());
         }
     }
 
@@ -143,10 +141,10 @@ public class EventService implements EventUseCase {
     @Override
     @Transactional
     public EventResponseDTO updateEvent(UUID eventId, EventUpdateDTO eventUpdateDTO) {
-        logger.info("Attempting to update event with ID: {}", eventId);
+        log.info("Attempting to update event with ID: {}", eventId);
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> {
-                    logger.warn("Update failed: Event with ID {} not found.", eventId);
+                    log.warn("Update failed: Event with ID {} not found.", eventId);
                     return new EventNotFoundException("Evento com ID " + eventId + " não encontrado.");
                 });
 
@@ -165,7 +163,7 @@ public class EventService implements EventUseCase {
         event.updateDetails(updateData, eventConfig.getMinDurationMinutes());
 
         Event updatedEvent = eventRepository.save(event);
-        logger.info("Event with ID {} updated successfully.", eventId);
+        log.info("Event with ID {} updated successfully.", eventId);
         return new EventResponseDTO(updatedEvent);
     }
 
@@ -180,17 +178,17 @@ public class EventService implements EventUseCase {
     @Transactional
     public void registerParticipant(UUID eventId, SubscriptionRequestDTO subscriptionRequest) {
         String participantEmail = subscriptionRequest.participantEmail();
-        logger.info("Attempting to register participant {} for event {}", participantEmail, eventId);
+        log.info("Attempting to register participant {} for event {}", participantEmail, eventId);
 
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> {
-                    logger.warn("Registration failed: Event with ID {} not found.", eventId);
+                    log.warn("Registration failed: Event with ID {} not found.", eventId);
                     return new EventNotFoundException("Evento com ID " + eventId + " não encontrado.");
                 });
         
         subscriptionRepository.findByEventAndParticipantEmail(event, participantEmail)
                 .ifPresent(subscription -> {
-                    logger.warn("Participant {} is already subscribed to event {}.", participantEmail, eventId);
+                    log.warn("Participant {} is already subscribed to event {}.", participantEmail, eventId);
                     throw new SubscriptionAlreadyExistsException("Este participante já está inscrito neste evento.");
                 });
 
@@ -199,12 +197,12 @@ public class EventService implements EventUseCase {
         Subscription newSubscription = new Subscription(event, participantEmail);
         subscriptionRepository.save(newSubscription);
         eventRepository.save(event);
-        logger.info("Participant {} registered successfully for event {}.", participantEmail, eventId);
+        log.info("Participant {} registered successfully for event {}.", participantEmail, eventId);
 
         try {
             eventNotificationPort.sendRegistrationConfirmation(event, participantEmail);
         } catch (Exception e) {
-            logger.error("Failed to send registration confirmation email to {} for event {}: {}", participantEmail, eventId, e.getMessage());
+            log.error("Failed to send registration confirmation email to {} for event {}: {}", participantEmail, eventId, e.getMessage());
         }
     }
 
@@ -217,15 +215,15 @@ public class EventService implements EventUseCase {
     @Override
     @Transactional(readOnly = true)
     public PageResponseDTO<RegisteredParticipantDTO> getRegisteredParticipants(UUID eventId, Pageable pageable) {
-        logger.info("Fetching participants for event with ID: {}", eventId);
+        log.info("Fetching participants for event with ID: {}", eventId);
         if (!eventRepository.existsById(eventId)) {
-            logger.warn("Event with ID {} not found when fetching participants.", eventId);
+            log.warn("Event with ID {} not found when fetching participants.", eventId);
             throw new EventNotFoundException("Evento com ID " + eventId + " não encontrado.");
         }
 
         Event event = eventRepository.getReferenceById(eventId);
         Page<Subscription> subscriptions = subscriptionRepository.findByEvent(event, pageable);
-        logger.info("Found {} participants for event {}.", subscriptions.getTotalElements(), eventId);
+        log.info("Found {} participants for event {}.", subscriptions.getTotalElements(), eventId);
         Page<RegisteredParticipantDTO> registeredParticipantDTOPage = subscriptions.map(subscription -> new RegisteredParticipantDTO(subscription.getParticipantEmail()));
         return new PageResponseDTO<>(registeredParticipantDTOPage);
     }
