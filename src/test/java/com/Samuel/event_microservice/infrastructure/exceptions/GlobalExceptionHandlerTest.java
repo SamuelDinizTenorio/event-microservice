@@ -173,6 +173,41 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("Should return 415 Unsupported Media Type for HttpMediaTypeNotSupportedException")
+    void handleHttpMediaTypeNotSupportedException() throws Exception {
+        // Arrange
+        String requestBody = "{\"name\":\"Teste\"}";
+        String expectedPath = "/test/validation"; // Endpoint que espera JSON
+
+        // Act & Assert
+        mockMvc.perform(post(expectedPath)
+                        .contentType(MediaType.APPLICATION_XML) // Envia um tipo de mídia não suportado
+                        .content(requestBody))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.status").value(415))
+                .andExpect(jsonPath("$.error").value("Unsupported Media Type"))
+                .andExpect(jsonPath("$.message").value("Unsupported Media Type. Please use application/json."))
+                .andExpect(jsonPath("$.path").value(expectedPath))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
+    @DisplayName("Should return 405 Method Not Allowed for HttpRequestMethodNotSupportedException")
+    void handleHttpRequestMethodNotSupportedException() throws Exception {
+        // Arrange
+        String expectedPath = "/test/validation"; // Endpoint que existe, mas só para POST
+
+        // Act & Assert
+        mockMvc.perform(get(expectedPath)) // Tenta usar GET em um endpoint que só aceita POST
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.status").value(405))
+                .andExpect(jsonPath("$.error").value("Method Not Allowed"))
+                .andExpect(jsonPath("$.message").value("Method Not Allowed. Supported methods: [POST]"))
+                .andExpect(jsonPath("$.path").value(expectedPath))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
     @DisplayName("Should return 404 Not Found for NoHandlerFoundException")
     void handleNoHandlerFoundException() throws Exception {
         // Arrange

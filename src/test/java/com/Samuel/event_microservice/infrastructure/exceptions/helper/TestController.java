@@ -4,6 +4,7 @@ import com.Samuel.event_microservice.core.exceptions.EventFullException;
 import com.Samuel.event_microservice.core.exceptions.EventNotFoundException;
 import com.Samuel.event_microservice.core.exceptions.SubscriptionAlreadyExistsException;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -11,12 +12,12 @@ import org.springframework.web.bind.annotation.*;
  * e ser usado em testes que validam o GlobalExceptionHandler.
  */
 @RestController
-@RequestMapping("/test")
+@RequestMapping("/test") // Usando um caminho base para todos os endpoints de teste
 public class TestController {
 
-    @PostMapping("/validation")
+    @PostMapping(value = "/validation", consumes = MediaType.APPLICATION_JSON_VALUE)
     public void testValidation(@Valid @RequestBody ValidationTestDTO dto) {
-        // Atingido apenas se a validação passar
+        // Atingido apenas se a validação passar. Usado para testar 400, 405 e 415.
     }
 
     @GetMapping("/event-not-found")
