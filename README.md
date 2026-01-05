@@ -23,6 +23,43 @@ O projeto foi construído seguindo princípios de **Arquitetura Limpa (Hexagonal
 
 ---
 
+## 🏛️ Estrutura do Projeto
+
+O projeto segue os princípios da **Arquitetura Limpa (Hexagonal)**, dividindo o código em duas camadas principais: `core` e `infrastructure`.
+
+```
+.
+└── src
+    ├── main
+    │   ├── java
+    │   │   └── com/Samuel/event_microservice
+    │   │       ├── core
+    │   │       │   ├── data         # DTOs do domínio (imutáveis)
+    │   │       │   ├── exceptions   # Exceções de negócio
+    │   │       │   ├── models       # Entidades e objetos de negócio
+    │   │       │   ├── ports        # Interfaces (portas) para a camada de infraestrutura
+    │   │       │   └── usecases     # Interfaces que definem os casos de uso
+    │   │       └── infrastructure
+    │   │           ├── adapters     # Implementações das portas (ex: adaptadores de e-mail)
+    │   │           ├── application  # Implementação dos casos de uso (Services)
+    │   │           ├── config       # Configurações do Spring
+    │   │           ├── controller   # Controladores REST (camada de entrada)
+    │   │           ├── dto          # DTOs para a camada de API
+    │   │           ├── exceptions   # Handlers de exceção globais
+    │   │           ├── repositories # Implementações JPA das portas de repositório
+    │   │           └── scheduler    # Tarefas agendadas
+    │   └── resources
+    │       ├── db/migration         # Scripts de migração do Flyway
+    │       └── application.yaml     # Configuração principal da aplicação
+    └── test
+        └── java                     # Testes que espelham a estrutura do `main`
+```
+
+- **`core`**: Representa o "hexágono" interior. Contém a lógica de negócio pura, entidades e as interfaces (portas) que definem como o núcleo se comunica com o mundo exterior. Esta camada não conhece o Spring, o Hibernate ou qualquer detalhe de infraestrutura.
+- **`infrastructure`**: A camada exterior. Contém as implementações concretas das portas definidas no `core`. Aqui ficam os controllers, os repositórios JPA, os adaptadores de serviços externos e todas as configurações relacionadas a frameworks.
+
+---
+
 ## 🛠️ Tecnologias Utilizadas
 
 - **Java 21**
